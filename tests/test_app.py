@@ -108,8 +108,8 @@ class StudyAppTests(unittest.TestCase):
         self.assertEqual(Image.open(io.BytesIO(reading.data)).size, (1654, 2339))
         reading.close()
         self.assertEqual(Path(photo["original_path"]).read_bytes(), original_bytes)
-        self.assertIn(f"/photos/{photo_id}/reading".encode(), self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}").data)
-        self.assertIn(f"/photos/{photo_id}/reading".encode(), self.client.get(f"/materials/{material_id}/print").data)
+        self.assertIn(f"/photos/{photo_id}/preview".encode(), self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}").data)
+        self.assertIn(f"/photos/{photo_id}/preview".encode(), self.client.get(f"/materials/{material_id}/print").data)
         self.assertIn(b"data:image/jpeg;base64,", self.client.get(f"/materials/{material_id}/export.html").data)
         self.assertEqual(self.client.get(f"/materials/{material_id}/read?packet_id=9999").status_code, 404)
 
@@ -129,7 +129,7 @@ class StudyAppTests(unittest.TestCase):
         self.assertIn("필기 해설".encode(), saved.data)
         self.assertIn(b"&lt;listen&gt;", saved.data)
         self.assertIn("원본 확인 필요".encode(), saved.data)
-        self.assertIn(f"/photos/{photo_id}/reading".encode(), saved.data)
+        self.assertIn(f"/photos/{photo_id}/preview".encode(), saved.data)
         self.assertIn("a listen을 명사로 사용한 표시".encode(), self.client.get(f"/materials/{material_id}/print").data)
         self.assertIn("a listen을 명사로 사용한 표시".encode(), self.client.get(f"/materials/{material_id}/export.html").data)
         with db_connect(self.db_path) as db:
@@ -157,6 +157,34 @@ class StudyAppTests(unittest.TestCase):
         with db_connect(self.db_path) as db:
             usage = db.execute("SELECT photo_id, model, input_tokens, output_tokens FROM ai_usage").fetchone()
             self.assertEqual(tuple(usage), (photo_id, "gpt-4.1-mini", 700, 500))
+
+    def test_packet_conversion_rolls_back_all_pages_if_later_page_fails(self):
+        material_id = self.make_material()
+        with db_connect(self.db_path) as db:
+            first = db.execute("SELECT * FROM photos WHERE material_id = ?", (material_id,)).fetchone()
+            packet_id = first["packet_id"]
+            db.execute("UPDATE photos SET rendered_json = ? WHERE id = ?", ('{"title":"old","blocks":[]}', first["id"]))
+            db.execute("INSERT INTO photos(material_id, packet_id, original_name, original_path, preview_path, mime_type, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                       (material_id, packet_id, "second.jpg", first["original_path"], first["preview_path"], first["mime_type"], 2))
+        class ImmediateThread:
+            def __init__(self, target, args, daemon):
+                self.target, self.args = target, args
+            def start(self):
+                self.target(*self.args)
+        result = ({"title": "new", "blocks": [{"kind": "text", "text": "new", "explanation": "", "uncertain": False}]},
+                  {"input_tokens": 10, "output_tokens": 10}, "gpt-6.1-sol")
+        with patch("app.ai_ready", return_value=True), patch("app.threading.Thread", ImmediateThread), \
+             patch("app.render_photo_with_ai", side_effect=[result, RuntimeError("Plus 사용량 한도")]):
+            token = csrf_from(self.client.get(f"/materials/{material_id}/read"))
+            response = self.client.post(f"/materials/{material_id}/packets/{packet_id}/render/ai",
+                data={"_csrf": token, "replace": "1"}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Plus 사용량 한도".encode(), response.data)
+        with db_connect(self.db_path) as db:
+            pages = db.execute("SELECT rendered_json FROM photos WHERE packet_id = ? ORDER BY position", (packet_id,)).fetchall()
+            self.assertEqual([row[0] for row in pages], ['{"title":"old","blocks":[]}', ""])
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM ai_usage").fetchone()[0], 0)
+            self.assertEqual(db.execute("SELECT status FROM render_jobs").fetchone()[0], "failed")
 
     def test_stapled_packets_keep_pages_and_notes_separate(self):
         self.login("owner", "owner-password-123")

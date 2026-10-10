@@ -3,13 +3,24 @@
 <div class="reader-page lesson-reader">
   <a class="back-link" href="{{ url_for('material_detail', material_id=item['id']) }}">← 수업으로 돌아가기</a>
   <header class="reader-heading">
-    <div><span class="eyebrow">STUDY STORY</span><h1>{{ item['title'] }}</h1><p>사진의 글과 필기를 읽기 좋은 순서로 다시 구성한 학습 페이지입니다. 필기 해설은 원본과 비교해 확인할 수 있습니다.</p></div>
+    <div><span class="eyebrow">STUDY STORY</span><h1>{{ item['title'] }}</h1><p>원본 사진은 업로드한 순서대로 보관됩니다. AI 정리본은 묶음별로 직접 변환을 시작한 뒤 확인할 수 있습니다.</p></div>
     <div class="reader-actions"><a class="button outline" href="{{ url_for('print_material', material_id=item['id']) }}" target="_blank" rel="noopener">PDF 저장</a></div>
   </header>
   {% for packet in packets %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">MATERIAL {{ loop.index }}</span><h2>{{ packet['title'] }}</h2><p>{{ packet['photos']|length }}쪽</p></div>
+    {% if current_user and current_user['role'] == 'owner' and packet['photos'] %}<div class="packet-render-control">
+      {% set job = packet['render_job'] %}
+      {% if job and job['status'] == 'running' %}<p>변환 중: {{ job['completed'] }}/{{ job['total'] }}쪽 읽음. 모든 쪽이 끝나면 정리본을 한 번에 반영합니다.</p>
+      {% elif job and job['status'] == 'failed' %}<p class="render-error">변환 실패: {{ job['error'] }} 기존 정리본은 그대로입니다.</p>{% endif %}
+      {% if job and job['status'] == 'succeeded' %}<p>묶음 전체 변환 완료. 원본과 필기를 비교해 확인해 주세요.</p>{% endif %}
+      {% if ai_ready and (not job or job['status'] != 'running') %}<form method="post" action="{{ url_for('ai_render_packet', material_id=item['id'], packet_id=packet['id']) }}"><input type="hidden" name="_csrf" value="{{ csrf }}">
+        {% if packet['photos']|selectattr('rendered')|list %}<label class="check-row"><input type="checkbox" name="replace" value="1" required> 이 묶음의 기존 정리본 덮어쓰기</label>{% endif %}
+        <button class="button outline">{{ packet['photos']|length }}쪽 묶음 AI 변환 시작 {{ '(Plus 이용량)' if plan_ready else '(유료 API)' }}</button>
+      </form>{% endif %}
+    </div>{% endif %}
     {% for photo in packet['photos'] %}{% set page_number = loop.index %}{% include 'rendered_photo.html' %}{% endfor %}
   </section>{% endfor %}
   {% if ungrouped %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">MATERIAL</span><h2>미분류</h2><p>{{ ungrouped|length }}쪽</p></div>{% for photo in ungrouped %}{% set page_number = loop.index %}{% include 'rendered_photo.html' %}{% endfor %}</section>{% endif %}
   {% if not packets and not ungrouped %}<p class="inline-empty">등록된 사진이 없습니다.</p>{% endif %}
 </div>
+{% if packets|selectattr('render_job')|selectattr('render_job.status', 'equalto', 'running')|list %}<script>setTimeout(() => location.reload(), 8000);</script>{% endif %}
 {% endblock %}
