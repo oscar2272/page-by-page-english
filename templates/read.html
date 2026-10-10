@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="reader-page lesson-reader">
+  <a class="back-link" href="{{ url_for('material_detail', material_id=item['id']) }}">← 수업으로 돌아가기</a>
+  <header class="reader-heading">
+    <div><span class="eyebrow">STUDY STORY</span><h1>{{ item['title'] }}</h1><p>사진의 글과 필기를 읽기 좋은 순서로 다시 구성한 학습 페이지입니다. 필기 해설은 원본과 비교해 확인할 수 있습니다.</p></div>
+    <div class="reader-actions"><a class="button outline" href="{{ url_for('print_material', material_id=item['id']) }}" target="_blank" rel="noopener">PDF 저장</a></div>
+  </header>
+  {% for packet in packets %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">MATERIAL {{ loop.index }}</span><h2>{{ packet['title'] }}</h2><p>{{ packet['photos']|length }}쪽</p></div>
+    {% for photo in packet['photos'] %}{% include 'rendered_photo.html' %}{% endfor %}
+  </section>{% endfor %}
+  {% if ungrouped %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">MATERIAL</span><h2>미분류</h2><p>{{ ungrouped|length }}쪽</p></div>{% for photo in ungrouped %}{% include 'rendered_photo.html' %}{% endfor %}</section>{% endif %}
+  {% if not packets and not ungrouped %}<p class="inline-empty">등록된 사진이 없습니다.</p>{% endif %}
+</div>
+{% endblock %}

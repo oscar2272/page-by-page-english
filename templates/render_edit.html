@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-narrow editor-page">
+  <a class="back-link" href="{{ url_for('read_material', material_id=item['id']) }}#photo-{{ photo['id'] }}">← 이어 읽기로 돌아가기</a>
+  <div class="page-heading"><span class="eyebrow">PAGE EDITOR</span><h1>이 쪽의 내용과 필기</h1><p>원본과 비교하며 인쇄 내용, 필기 원문, 필기의 뜻을 순서대로 고쳐 주세요.</p></div>
+  <div class="render-edit-layout">
+    <aside class="render-edit-source"><img src="{{ url_for('photo_file', photo_id=photo['id'], kind='preview') }}" alt="{{ photo['original_name'] }} 원본"><a href="{{ url_for('photo_file', photo_id=photo['id'], kind='original') }}">촬영 원본 내려받기</a></aside>
+    <form method="post" class="editor-form" id="render-edit-form"><input type="hidden" name="_csrf" value="{{ csrf }}"><section class="editor-section"><div class="editor-section-body"><label>이 쪽의 제목<input name="title" maxlength="160" value="{{ rendered['title'] }}" placeholder="예: Did — 지난 일 묻기"></label><div id="render-blocks">
+      {% for block in rendered['blocks'] %}<div class="render-block-editor"><input type="hidden" name="block_key" value="{{ loop.index0 }}"><div class="render-block-editor-head"><strong>내용 {{ loop.index }}</strong><button type="button" class="text-button danger remove-render-block">삭제</button></div><label>종류<select name="block_kind_{{ loop.index0 }}">{% for kind, label in [('heading','소제목'),('text','본문'),('example','예문'),('exercise','문제·연습'),('handwriting','손글씨 필기')] %}<option value="{{ kind }}" {% if block['kind'] == kind %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><label>원본에 적힌 글<textarea name="block_text_{{ loop.index0 }}" rows="4">{{ block['text'] }}</textarea></label><label>설명·필기 의도<textarea name="block_explanation_{{ loop.index0 }}" rows="3">{{ block['explanation'] }}</textarea></label><label class="check-row"><input type="checkbox" name="block_uncertain_{{ loop.index0 }}" value="1" {% if block['uncertain'] %}checked{% endif %}> 원본 확인 필요</label></div>{% endfor %}
+    </div><button class="button outline" id="add-render-block" type="button">＋ 내용 추가</button></div></section><div class="editor-actions"><button class="button primary">정리본 저장</button></div></form>
+  </div>
+</div>
+<template id="render-block-template"><div class="render-block-editor"><input type="hidden" name="block_key" value="__INDEX__"><div class="render-block-editor-head"><strong>새 내용</strong><button type="button" class="text-button danger remove-render-block">삭제</button></div><label>종류<select name="block_kind___INDEX__"><option value="heading">소제목</option><option value="text" selected>본문</option><option value="example">예문</option><option value="exercise">문제·연습</option><option value="handwriting">손글씨 필기</option></select></label><label>원본에 적힌 글<textarea name="block_text___INDEX__" rows="4"></textarea></label><label>설명·필기 의도<textarea name="block_explanation___INDEX__" rows="3"></textarea></label><label class="check-row"><input type="checkbox" name="block_uncertain___INDEX__" value="1"> 원본 확인 필요</label></div></template>
+<script src="{{ url_for('static', filename='render_edit.js') }}" defer></script>
+{% endblock %}

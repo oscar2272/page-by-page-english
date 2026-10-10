@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<a class="back-link" href="{{ url_for('practice', material_id=attempt['material_id']) }}">← 복습 문제</a>
+<div class="page-heading"><span class="eyebrow">PRACTICE HISTORY · {{ attempt['week_number'] }}주차</span><h1>{{ attempt['title'] }} 풀이 기록</h1><p>{{ attempt['created_at'][:16] }}에 저장한 답과 직접 확인한 결과입니다.</p></div>
+{% set correct = answers|selectattr('status', 'equalto', 'correct')|list|length %}
+{% set incorrect = answers|selectattr('status', 'equalto', 'incorrect')|list|length %}
+<section class="panel study-panel"><h2>{{ correct }} / {{ answers|length }} 맞음</h2><p>틀림 {{ incorrect }}개 · 미확인 {{ answers|length - correct - incorrect }}개</p></section>
+<div class="question-list">{% for row in answers %}<article class="question-card"><div class="question-top"><span class="question-number">Q{{ loop.index }}</span><span class="tag">{{ {'correct':'맞음','incorrect':'틀림','unreviewed':'미확인'}[row['status']] }}{% if row['difficult'] %} · 어려웠음{% endif %}</span></div><h3>{{ row['prompt'] }}</h3><p>내 답: {{ row['submitted_answer'] or '(빈 답)' }}</p><p>기준 답: {{ row['expected_answer'] }}</p></article>{% endfor %}</div>
+{% endblock %}

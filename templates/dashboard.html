@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="hero"><div><span class="eyebrow">YOUR LEARNING ARCHIVE</span><h1>영어 공부, <em>주차별로.</em></h1><p>주차를 선택해 수업 자료와 다음 주 시험을 살펴보세요.</p></div></section>
+<div class="section-heading"><div><span class="eyebrow">WEEKS</span><h2>학습 주차</h2></div>{% if current_user and current_user['role'] == 'owner' %}<form method="post" action="{{ url_for('new_week') }}"><input type="hidden" name="_csrf" value="{{ csrf }}"><button class="button primary">+ 다음 주차 만들기</button></form>{% endif %}</div>
+<div class="material-grid week-grid">{% for week in weeks %}<a class="material-card" href="{{ url_for('week_detail', number=week['number']) }}"><div class="card-top"><span class="card-icon">{{ '%02d'|format(week['number']) }}</span><span class="card-arrow">↗</span></div><div><span class="card-date">WEEK {{ week['number'] }}</span><h3>{{ week['number'] }}주차</h3><p>수업 {{ week['lesson_count'] or 0 }}개 · 시험 {{ week['exam_count'] or 0 }}개</p></div><span class="card-link">주차 열기 →</span></a>{% endfor %}</div>
+{% endblock %}

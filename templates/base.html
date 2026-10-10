@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{{ title }} · Page by Page</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="site-header">
+      <a class="brand" href="{{ url_for('dashboard') }}" aria-label="Page by Page 홈">
+        <span class="brand-mark">P<span>.</span></span>
+        <span class="brand-name">Page by Page<small>ENGLISH STUDY ROOM</small></span>
+      </a>
+      <nav class="main-nav" aria-label="주 메뉴">
+        <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}aria-current="page"{% endif %}>주차별 학습</a>
+        <a href="{{ url_for('vocabulary_page') }}" {% if request.endpoint == 'vocabulary_page' %}aria-current="page"{% endif %}>단어장</a>
+        {% if current_user and current_user['role'] == 'owner' %}
+        <a href="{{ url_for('progress') }}" {% if request.endpoint == 'progress' %}aria-current="page"{% endif %}>학습 기록</a>
+        <a href="{{ url_for('invites') }}" {% if request.endpoint == 'invites' %}aria-current="page"{% endif %}>초대</a>
+        <a href="{{ url_for('settings_page') }}" {% if request.endpoint == 'settings_page' %}aria-current="page"{% endif %}>설정</a>
+        {% endif %}
+      </nav>
+      {% if current_user %}
+      <div class="account-menu">
+        <a class="account-link" href="{{ url_for('account') }}">{{ current_user['display_name'] }}</a>
+        <form method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="_csrf" value="{{ csrf }}">
+          <button class="text-button" type="submit">로그아웃</button>
+        </form>
+      </div>
+      {% else %}<a class="account-link" href="{{ url_for('login') }}">로그인</a>
+      {% endif %}
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-stack" role="status">
+        {% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <main>{% block content %}{% endblock %}</main>
+    <footer class="site-footer"><span>PAGE BY PAGE</span><span>조금씩, 오래 기억할 수 있도록.</span></footer>
+  </div>
+</body>
+</html>

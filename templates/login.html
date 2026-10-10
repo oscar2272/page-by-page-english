@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="login-layout">
+  <section class="login-intro">
+    <span class="eyebrow">PRIVATE STUDY LIBRARY</span>
+    <h1>한 장씩 정리하고,<br><em>한 걸음씩 기억해요.</em></h1>
+    <p>사진 속 영어 자료를 읽기 좋은 기록으로. 초대받은 사람들과 함께 공부할 수 있는 작은 자료실입니다.</p>
+    <div class="illustration-card" aria-hidden="true">
+      <span class="paper-line short"></span><span class="paper-line"></span><span class="paper-line medium"></span>
+      <span class="paper-highlight">A little progress every day.</span>
+      <span class="paper-line"></span><span class="paper-line short"></span>
+      <div class="card-stamp">WEEK 01</div>
+    </div>
+  </section>
+  <section class="login-card">
+    <span class="eyebrow">WELCOME BACK</span>
+    <h2>자료실 입장</h2>
+    <p>초대받은 계정 또는 소유자 계정으로 로그인하세요.</p>
+    <form method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf }}">
+      <label>아이디<input name="username" autocomplete="username" required autofocus></label>
+      <label>비밀번호<input type="password" name="password" autocomplete="current-password" required></label>
+      <button class="button primary full" type="submit">로그인 <span aria-hidden="true">→</span></button>
+    </form>
+    <p class="form-note">초대 계정이 없다면 소유자에게 요청해 주세요.</p>
+  </section>
+</div>
+{% endblock %}

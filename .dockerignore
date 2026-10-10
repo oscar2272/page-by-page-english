@@ -1,0 +1,9 @@
+.venv
+instance
+.git
+__pycache__
+tests
+.env
+.playwright-mcp
+backups
+dist

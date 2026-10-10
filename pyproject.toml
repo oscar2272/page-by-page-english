@@ -1,0 +1,17 @@
+[project]
+name = "english-study-organizer"
+version = "0.1.0"
+description = "Private English worksheet library with invited readers"
+requires-python = ">=3.9"
+dependencies = [
+  "Flask>=3.1,<4",
+  "Pillow>=11,<12",
+  "pillow-heif>=0.22,<1",
+  "gunicorn>=23,<24",
+  "python-dotenv>=1,<2",
+  "opencv-python-headless>=4.10,<5",
+  "PyJWT[crypto]>=2.10,<3",
+]
+
+[tool.uv]
+package = false

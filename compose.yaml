@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      INSTANCE_DIR: /data
+      COOKIE_SECURE: "1"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPL_API_KEY: ${DEEPL_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+    volumes:
+      - study_data:/data
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN to a DNS name pointing to this server}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+volumes:
+  study_data:
+  caddy_data:
+  caddy_config:

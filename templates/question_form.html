@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-narrow"><a class="back-link" href="{{ url_for('material_detail', material_id=question['material_id']) }}#questions">← 문제 목록으로</a><div class="page-heading"><span class="eyebrow">QUESTION EDITOR</span><h1>문제 수정과 피드백</h1><p>수정 내용은 바로 반영되고, 피드백은 다음 AI 문제 생성에 참고됩니다.</p></div>
+<form method="post" class="panel form-panel"><input type="hidden" name="_csrf" value="{{ csrf }}"><label>문제 유형<input name="kind" value="{{ question['kind'] }}"></label><label>문제<textarea name="prompt" rows="4" required>{{ question['prompt'] }}</textarea></label><label>정답<input name="answer" value="{{ question['answer'] }}" required></label><label>해설<textarea name="explanation" rows="4">{{ question['explanation'] }}</textarea></label><label>다음 생성에 반영할 피드백<textarea name="feedback" rows="4" placeholder="예: 단순 단어 암기보다 문맥을 묻는 문제를 만들어 줘">{{ question['feedback'] }}</textarea></label><div class="form-actions"><a class="button ghost" href="{{ url_for('material_detail', material_id=question['material_id']) }}#questions">취소</a><button class="button primary" type="submit">저장하기</button></div></form></div>
+{% endblock %}
