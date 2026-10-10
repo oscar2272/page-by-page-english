@@ -354,12 +354,19 @@ def init_db(path: Path) -> None:
             photo_id INTEGER NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
             user_id INTEGER NOT NULL REFERENCES users(id),
             anchor_y INTEGER NOT NULL CHECK(anchor_y BETWEEN 0 AND 10000),
+            anchor_block INTEGER,
+            block_y INTEGER CHECK(block_y BETWEEN 0 AND 10000),
             body TEXT NOT NULL DEFAULT '',
             drawing_path TEXT NOT NULL DEFAULT '',
             recognized_text TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )""")
+        annotation_columns = {row["name"] for row in db.execute("PRAGMA table_info(episode_annotations)")}
+        if "anchor_block" not in annotation_columns:
+            db.execute("ALTER TABLE episode_annotations ADD COLUMN anchor_block INTEGER")
+        if "block_y" not in annotation_columns:
+            db.execute("ALTER TABLE episode_annotations ADD COLUMN block_y INTEGER")
         db.execute("CREATE INDEX IF NOT EXISTS idx_episode_annotations_packet ON episode_annotations(packet_id, photo_id, anchor_y)")
         db.executescript("""
         CREATE TABLE IF NOT EXISTS weeks (
@@ -1656,7 +1663,7 @@ def create_app(test_config: dict | None = None) -> Flask:
             fully_rendered = bool(packet["photos"]) and all(photo["rendered"] for photo in packet["photos"]) and packet["has_successful_render"]
             annotations = []
             if fully_rendered and g.user and g.user["role"] == "owner":
-                annotations = [dict(row) for row in db.execute("""SELECT id, photo_id, anchor_y, body,
+                annotations = [dict(row) for row in db.execute("""SELECT id, photo_id, anchor_y, anchor_block, block_y, body,
                     recognized_text, drawing_path, updated_at FROM episode_annotations
                     WHERE packet_id = ? ORDER BY photo_id, anchor_y, id""", (packet_id,))]
                 for note in annotations:
@@ -1723,11 +1730,25 @@ def create_app(test_config: dict | None = None) -> Flask:
         anchor_y = request.form.get("anchor_y", "")
         if not photo_id.isdecimal() or not anchor_y.isdecimal() or not 0 <= int(anchor_y) <= 10000:
             abort(400)
-        photo = db.execute("SELECT id FROM photos WHERE id = ? AND packet_id = ?", (int(photo_id), packet_id)).fetchone()
+        block_value = request.form.get("anchor_block", "")
+        block_y_value = request.form.get("block_y", "")
+        if block_value or block_y_value:
+            if not block_value.isdecimal() or not block_y_value.isdecimal() or not 0 <= int(block_value) < 80 or not 0 <= int(block_y_value) <= 10000:
+                abort(400)
+            anchor_block, block_y = int(block_value), int(block_y_value)
+        else:
+            anchor_block, block_y = None, None
+        photo = db.execute("SELECT id, rendered_json FROM photos WHERE id = ? AND packet_id = ?", (int(photo_id), packet_id)).fetchone()
         succeeded = db.execute("SELECT 1 FROM render_jobs WHERE packet_id = ? AND status = 'succeeded' LIMIT 1", (packet_id,)).fetchone()
         if (photo is None or not succeeded or
                 db.execute("SELECT 1 FROM photos WHERE packet_id = ? AND rendered_json = '' LIMIT 1", (packet_id,)).fetchone()):
             abort(400, "묶음 전체를 변환한 뒤 메모할 수 있습니다.")
+        if anchor_block is not None:
+            try:
+                if anchor_block >= len(json.loads(photo["rendered_json"])["blocks"]):
+                    abort(400)
+            except (ValueError, KeyError, TypeError):
+                abort(400)
         annotation_id = request.form.get("annotation_id", "")
         current = None
         if annotation_id:
@@ -1768,15 +1789,15 @@ def create_app(test_config: dict | None = None) -> Flask:
             abort(400, "메모 내용을 입력해 주세요.")
         try:
             if current:
-                db.execute("""UPDATE episode_annotations SET photo_id = ?, anchor_y = ?, body = ?,
+                db.execute("""UPDATE episode_annotations SET photo_id = ?, anchor_y = ?, anchor_block = ?, block_y = ?, body = ?,
                     drawing_path = ?, recognized_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?""",
-                    (int(photo_id), int(anchor_y), body, drawing_path, recognized, current["id"]))
+                    (int(photo_id), int(anchor_y), anchor_block, block_y, body, drawing_path, recognized, current["id"]))
                 saved_id = current["id"]
             else:
                 saved_id = db.execute("""INSERT INTO episode_annotations
-                    (packet_id, photo_id, user_id, anchor_y, body, drawing_path, recognized_text)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                    (packet_id, int(photo_id), g.user["id"], int(anchor_y), body, drawing_path, recognized)).lastrowid
+                    (packet_id, photo_id, user_id, anchor_y, anchor_block, block_y, body, drawing_path, recognized_text)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (packet_id, int(photo_id), g.user["id"], int(anchor_y), anchor_block, block_y, body, drawing_path, recognized)).lastrowid
             db.execute("DELETE FROM packet_insights WHERE packet_id = ?", (packet_id,))
             db.commit()
         except Exception:
@@ -1786,6 +1807,7 @@ def create_app(test_config: dict | None = None) -> Flask:
         if current and current["drawing_path"] and current["drawing_path"] != drawing_path:
             Path(current["drawing_path"]).unlink(missing_ok=True)
         return jsonify({"id": saved_id, "photo_id": int(photo_id), "anchor_y": int(anchor_y),
+                        "anchor_block": anchor_block, "block_y": block_y,
                         "body": body, "recognized_text": recognized,
                         "drawing_url": url_for("episode_annotation_drawing", annotation_id=saved_id) if drawing_path else ""})
 

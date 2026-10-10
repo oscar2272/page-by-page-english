@@ -213,8 +213,10 @@ class StudyAppTests(unittest.TestCase):
         self.assertNotIn(b'class="episode-original"', page.data)
         self.assertEqual(self.client.get(f"/photos/{photo_id}/note").status_code, 404)
         saved = self.client.post(note_url, data={"_csrf": csrf_from(page), "photo_id": photo_id,
-            "anchor_y": "4321", "body": "did 뒤 동사원형이 헷갈림"})
+            "anchor_y": "4321", "anchor_block": "0", "block_y": "6500",
+            "body": "did 뒤 동사원형이 헷갈림"})
         self.assertEqual(saved.status_code, 200)
+        self.assertEqual((saved.json["anchor_block"], saved.json["block_y"]), (0, 6500))
         note_id = saved.json["id"]
         second = self.client.post(note_url, data={"_csrf": csrf_from(page), "photo_id": photo_id,
             "anchor_y": "8123", "body": "다른 위치의 메모"})

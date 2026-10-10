@@ -9,6 +9,8 @@ if (episode && stream && stream.dataset.annotatable === '1') {
   const feedback = document.querySelector('#note-feedback');
   const photoInput = document.querySelector('#annotation-photo-id');
   const anchorInput = document.querySelector('#annotation-anchor-y');
+  const blockInput = document.querySelector('#annotation-anchor-block');
+  const blockYInput = document.querySelector('#annotation-block-y');
   const idInput = document.querySelector('#annotation-id');
   const body = document.querySelector('#annotation-body');
   const recognized = document.querySelector('#annotation-recognized');
@@ -41,6 +43,8 @@ if (episode && stream && stream.dataset.annotatable === '1') {
     idInput.value = note.id || '';
     photoInput.value = note.photo_id;
     anchorInput.value = note.anchor_y;
+    blockInput.value = note.anchor_block ?? '';
+    blockYInput.value = note.block_y ?? '';
     body.value = note.body || '';
     recognized.value = note.recognized_text || '';
     document.querySelector('#note-position').textContent = note.id ? '이 위치의 메모 수정' : '선택한 위치에 새 메모';
@@ -65,15 +69,17 @@ if (episode && stream && stream.dataset.annotatable === '1') {
     for (const note of notes.values()) {
       const segment = stream.querySelector(`[data-photo-id="${Number(note.photo_id)}"]`);
       if (!segment) continue;
+      const anchor = note.anchor_block == null ? segment :
+        segment.querySelector(`[data-block-index="${Number(note.anchor_block)}"]`) || segment;
       const marker = document.createElement('button');
       marker.type = 'button';
       marker.className = 'episode-marker';
-      marker.style.top = `${Number(note.anchor_y) / 100}%`;
+      marker.style.top = `${Number(anchor === segment ? note.anchor_y : note.block_y) / 100}%`;
       marker.textContent = '✎';
       marker.title = note.body || note.recognized_text || '필기 메모';
       marker.setAttribute('aria-label', '이 위치의 메모 열기');
       marker.addEventListener('click', event => { event.stopPropagation(); setPlacing(false); openPanel(note); });
-      segment.appendChild(marker);
+      anchor.appendChild(marker);
     }
   };
   renderMarkers();
@@ -89,8 +95,12 @@ if (episode && stream && stream.dataset.annotatable === '1') {
     event.stopPropagation();
     const rect = segment.getBoundingClientRect();
     const anchor = Math.max(0, Math.min(10000, Math.round((event.clientY - rect.top) / rect.height * 10000)));
+    const block = event.target.closest('.episode-block');
+    const blockRect = block && block.closest('.episode-segment') === segment ? block.getBoundingClientRect() : null;
+    const blockY = blockRect ? Math.max(0, Math.min(10000, Math.round((event.clientY - blockRect.top) / blockRect.height * 10000))) : null;
     setPlacing(false);
-    openPanel({photo_id: Number(segment.dataset.photoId), anchor_y: anchor});
+    openPanel({photo_id: Number(segment.dataset.photoId), anchor_y: anchor,
+      anchor_block: blockRect ? Number(block.dataset.blockIndex) : null, block_y: blockY});
     if (window.innerWidth < 850) panel.scrollIntoView({behavior: 'smooth', block: 'start'});
   }, true);
   document.querySelector('#close-note').addEventListener('click', closePanel);
