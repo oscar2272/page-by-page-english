@@ -4,7 +4,7 @@ import re
 
 
 REGION_TYPES = ("body", "callout", "table", "list")
-TEXT_STYLES = ("normal", "bold", "italic", "underline")
+TEXT_STYLES = ("normal", "bold", "italic", "underline", "bold_italic")
 COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
