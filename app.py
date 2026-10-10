@@ -1513,7 +1513,8 @@ def create_app(test_config: dict | None = None) -> Flask:
                 abort(404)
             ungrouped = []
         return render_template("read.html", title=f"{item['title']} 이어 읽기", item=item,
-                               packets=packets, ungrouped=ungrouped, ai_ready=ai_ready())
+                               packets=packets, ungrouped=ungrouped, ai_ready=ai_ready(),
+                               plan_ready=bool(plan_status(app.instance_path)))
 
     @app.get("/materials/<int:material_id>/print")
     def print_material(material_id):

@@ -7,9 +7,9 @@
     <div class="reader-actions"><a class="button outline" href="{{ url_for('print_material', material_id=item['id']) }}" target="_blank" rel="noopener">PDF 저장</a></div>
   </header>
   {% for packet in packets %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">MATERIAL {{ loop.index }}</span><h2>{{ packet['title'] }}</h2><p>{{ packet['photos']|length }}쪽</p></div>
-    {% for photo in packet['photos'] %}{% include 'rendered_photo.html' %}{% endfor %}
+    {% for photo in packet['photos'] %}{% set page_number = loop.index %}{% include 'rendered_photo.html' %}{% endfor %}
   </section>{% endfor %}
-  {% if ungrouped %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">MATERIAL</span><h2>미분류</h2><p>{{ ungrouped|length }}쪽</p></div>{% for photo in ungrouped %}{% include 'rendered_photo.html' %}{% endfor %}</section>{% endif %}
+  {% if ungrouped %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">MATERIAL</span><h2>미분류</h2><p>{{ ungrouped|length }}쪽</p></div>{% for photo in ungrouped %}{% set page_number = loop.index %}{% include 'rendered_photo.html' %}{% endfor %}</section>{% endif %}
   {% if not packets and not ungrouped %}<p class="inline-empty">등록된 사진이 없습니다.</p>{% endif %}
 </div>
 {% endblock %}

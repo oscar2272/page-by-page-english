@@ -127,7 +127,12 @@ def call_plan_ai(instance_dir, input_items, schema, schema_name, instructions):
             if completed is None:
                 raise RuntimeError("ChatGPT 응답이 끝까지 도착하지 않았습니다.")
     except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"ChatGPT 요청이 거부됐습니다 (HTTP {exc.code}). 연결과 사용량을 확인해 주세요.") from exc
+        try:
+            error = json.loads(exc.read().decode("utf-8")).get("error", {})
+            detail = str(error.get("message") or error.get("code") or "")[:240]
+        except (ValueError, UnicodeDecodeError):
+            detail = ""
+        raise RuntimeError(f"ChatGPT 요청이 거부됐습니다 (HTTP {exc.code}). {detail}") from exc
     except urllib.error.URLError as exc:
         raise RuntimeError("ChatGPT 서비스에 연결할 수 없습니다.") from exc
     raw = "".join(chunks)
