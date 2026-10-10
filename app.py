@@ -145,7 +145,7 @@ def render_photo_with_ai(photo, packet_title: str, instance_path: str):
     return result, usage, selected_model
 
 
-APPEARANCES = ("auto", "plain", "shaded", "table_header", "table_row", "example_list", "running_header", "margin_note")
+APPEARANCES = ("auto", "plain", "document_title", "subtitle", "shaded", "table_header", "table_row", "example_list", "running_header", "margin_note")
 
 
 def display_page(page):
@@ -153,13 +153,18 @@ def display_page(page):
     decorated = dict(page)
     blocks = []
     previous_shaded = False
+    previous_document_title = False
     for block in page["blocks"]:
         item = dict(block)
         value = item["text"].strip()
         appearance = item.get("appearance", "auto")
         cells = re.split(r"\t+| {2,}|\s+\|\s+", value, maxsplit=1)
         if appearance == "auto":
-            if value.startswith("💡"):
+            if item["kind"] == "heading" and " ".join(value.split()) == " ".join(page.get("title", "").split()):
+                appearance = "document_title"
+            elif previous_document_title and item["kind"] == "text":
+                appearance = "subtitle"
+            elif value.startswith("💡"):
                 appearance = "shaded"
             elif previous_shaded and value.startswith("(Think of "):
                 appearance = "shaded"
@@ -180,6 +185,7 @@ def display_page(page):
         item["appearance"] = appearance
         item["cells"] = cells if appearance in ("table_header", "table_row") and len(cells) == 2 else None
         item["shaded_continuation"] = appearance == "shaded" and previous_shaded
+        previous_document_title = appearance == "document_title"
         callout = value.split("\n\n", 1) if appearance == "shaded" and value.startswith("💡") else []
         item["callout_head"] = callout[0] if callout else ""
         item["callout_body"] = callout[1] if len(callout) == 2 else ""

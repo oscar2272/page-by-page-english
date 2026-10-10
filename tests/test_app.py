@@ -230,8 +230,11 @@ class StudyAppTests(unittest.TestCase):
         self.assertEqual(page["blocks"][0]["callout_body"], "(Think of MAKE as building.)")
         self.assertEqual(display_page({"title": "", "blocks": [{"kind": "text", "text": "💡 Plain",
             "appearance": "plain", "explanation": "", "uncertain": False}]})["blocks"][0]["appearance"], "plain")
-        self.assertFalse(display_page({"title": "Two Line Title", "blocks": [{"kind": "heading",
-            "text": "Two Line\nTitle", "explanation": "", "uncertain": False}]})["show_title"])
+        title_page = display_page({"title": "Two Line Title", "blocks": [{"kind": "heading",
+            "text": "Two Line\nTitle", "explanation": "", "uncertain": False},
+            {"kind": "text", "text": "A subtitle", "explanation": "", "uncertain": False}]})
+        self.assertFalse(title_page["show_title"])
+        self.assertEqual([block["appearance"] for block in title_page["blocks"]], ["document_title", "subtitle"])
         material_id = self.make_material()
         photo_id, packet_id = self.converted_episode(material_id)
         with db_connect(self.db_path) as db:

@@ -91,3 +91,5 @@
 .episode-source{margin:12px 0 0}
 .episode-segment{padding-bottom:10px}
 .episode-segment+.episode-segment{padding-top:10px}
+.episode-document-title h3{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px;font-size:22px}
+.episode-subtitle p{font-style:italic}
