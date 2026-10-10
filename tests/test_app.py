@@ -589,6 +589,27 @@ class StudyAppTests(unittest.TestCase):
         self.assertEqual(usage["input_tokens"], 2)
         plan_call.assert_called_once()
 
+    def test_page_crops_use_valid_image_data_urls(self):
+        import base64
+        import json
+
+        self.make_material()
+        credential = Path(self.app.instance_path) / "chatgpt-plan.json"
+        credential.write_text(json.dumps({"scopes": ["chatgpt.tokens.use.direct"], "refresh_token": "test-refresh"}))
+        with db_connect(self.db_path) as db:
+            photo_id = db.execute("SELECT id FROM photos").fetchone()["id"]
+        token = csrf_from(self.client.get(f"/materials/1/read"))
+        result = {"title": "Test", "blocks": [{"kind": "text", "text": "Test", "explanation": "", "uncertain": False}]}
+        with patch("app.call_ai", return_value=(result, {"input_tokens": 1, "output_tokens": 1})) as mocked:
+            response = self.client.post(f"/photos/{photo_id}/render/ai", data={"_csrf": token})
+        self.assertEqual(response.status_code, 302)
+        images = mocked.call_args.args[0][1:]
+        self.assertEqual(len(images), 4)
+        for image in images:
+            prefix, encoded = image["image_url"].split(",", 1)
+            self.assertEqual(prefix, "data:image/jpeg;base64")
+            self.assertTrue(base64.b64decode(encoded).startswith(b"\xff\xd8"))
+
 
 if __name__ == "__main__":
     unittest.main()

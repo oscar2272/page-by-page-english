@@ -1464,7 +1464,7 @@ def create_app(test_config: dict | None = None) -> Flask:
                     bottom = min(height, round((index + 1) * height / 3) + round(height * 0.045))
                     closeup = io.BytesIO()
                     page_image.crop((0, top, page_image.width, bottom)).save(closeup, format="JPEG", quality=88)
-                    image_inputs.append({"type": "input_image", "image_url": "data:image/jpeg;base64:" +
+                    image_inputs.append({"type": "input_image", "image_url": "data:image/jpeg;base64," +
                         base64.b64encode(closeup.getvalue()).decode("ascii"), "detail": "high"})
             selected_model = plan_status(app.instance_path)["model"] if plan_status(app.instance_path) else "gpt-4.1-mini"
             result, usage = call_ai([{"type": "input_text", "text": prompt}, *image_inputs],
