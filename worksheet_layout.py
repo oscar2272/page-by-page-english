@@ -33,8 +33,6 @@ def normalize_page(page):
         cells = block.get("cells", [])
         if not isinstance(cells, list) or len(cells) > 6 or any(not isinstance(cell, str) or len(cell) > 5000 for cell in cells):
             raise ValueError("표의 칸 구조가 올바르지 않습니다.")
-        if region == "table" and len(cells) < 2:
-            raise ValueError("표 행의 칸이 부족합니다. 원본 표를 확인해야 합니다.")
         if region != "table" and cells:
             raise ValueError("표가 아닌 영역에 표 칸이 들어 있습니다.")
         if region == "table" and not text.strip():
@@ -58,10 +56,8 @@ def normalize_page(page):
                            "text_style": style, "cells": cells})
     for group in finished_groups:
         rows = [block for block in normalized if block["group"] == group]
-        if len({(row["background"], row["border"]) for row in rows}) != 1:
-            raise ValueError("같은 원본 영역의 배경색이나 테두리가 서로 다릅니다.")
-        if rows[0]["region"] == "table" and len({len(row["cells"]) for row in rows}) != 1:
-            raise ValueError("표 행마다 칸 수가 다릅니다. 원본 표를 확인해야 합니다.")
+        # Printed tables can contain spanning cells or handwritten marks between rows.
+        # Keep their source order without inventing empty cells to satisfy a fixed grid.
     return {"version": 2, "title": str(page.get("title", ""))[:160], "blocks": normalized}
 
 

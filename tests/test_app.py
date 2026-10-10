@@ -175,7 +175,7 @@ class StudyAppTests(unittest.TestCase):
         self.assertIn(b"block_group_0", editor.data)
         self.assertEqual(display_page(page)["regions"][0]["blocks"][1]["index"], 1)
         broken = {**page, "blocks": [dict(block) for block in page["blocks"]]}
-        broken["blocks"][-1]["cells"] = ["One"]
+        broken["blocks"][-1]["region"] = "invalid"
         with self.assertRaises(ValueError):
             normalize_page(broken)
 
