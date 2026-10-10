@@ -16,7 +16,7 @@
   {% for photo in packet['photos'] %}<section class="episode-segment{{ ' unconverted' if not fully_rendered else '' }}" id="photo-{{ photo['id'] }}" data-photo-id="{{ photo['id'] }}" aria-label="{{ loop.index }}쪽">
     {% if fully_rendered %}
       {% if photo['rendered']['show_title'] %}<h2>{{ photo['rendered']['title'] }}</h2>{% endif %}
-      {% for block in photo['rendered']['blocks'] %}<div class="episode-block episode-{{ block['kind'] }} episode-{{ block['appearance'] }}{{ ' shaded-continuation' if block['shaded_continuation'] else '' }}" data-block-index="{{ loop.index0 }}">
+      {% for block in photo['rendered']['blocks'] %}<div class="episode-block episode-{{ block['kind'] }} episode-{{ block['appearance']|replace('_', '-') }}{{ ' shaded-continuation' if block['shaded_continuation'] else '' }}" data-block-index="{{ loop.index0 }}">
         {% if block['cells'] %}<div class="episode-cells"><span>{{ block['cells'][0] }}</span><span>{{ block['cells'][1] }}</span></div>
         {% elif block['callout_head'] %}<p class="episode-callout-head">{{ block['callout_head'] }}</p>{% if block['callout_body'] %}<p class="episode-callout-body">{{ block['callout_body'] }}</p>{% endif %}
         {% elif block['lead'] %}<p><strong>{{ block['lead'] }}</strong> {{ block['rest'] }}</p>

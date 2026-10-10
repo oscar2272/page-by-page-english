@@ -190,7 +190,7 @@ def display_page(page):
         blocks.append(item)
     decorated["blocks"] = blocks
     decorated["show_title"] = bool(page.get("title")) and not any(
-        block["text"].strip() == page["title"].strip() and block["kind"] == "heading" for block in blocks)
+        " ".join(block["text"].split()) == " ".join(page["title"].split()) and block["kind"] == "heading" for block in blocks)
     return decorated
 
 

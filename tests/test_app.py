@@ -230,6 +230,16 @@ class StudyAppTests(unittest.TestCase):
         self.assertEqual(page["blocks"][0]["callout_body"], "(Think of MAKE as building.)")
         self.assertEqual(display_page({"title": "", "blocks": [{"kind": "text", "text": "💡 Plain",
             "appearance": "plain", "explanation": "", "uncertain": False}]})["blocks"][0]["appearance"], "plain")
+        self.assertFalse(display_page({"title": "Two Line Title", "blocks": [{"kind": "heading",
+            "text": "Two Line\nTitle", "explanation": "", "uncertain": False}]})["show_title"])
+        material_id = self.make_material()
+        photo_id, packet_id = self.converted_episode(material_id)
+        with db_connect(self.db_path) as db:
+            db.execute("UPDATE photos SET rendered_json = ? WHERE id = ?", (json.dumps(page), photo_id))
+        html = self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}").data
+        self.assertIn(b"episode-shaded", html)
+        self.assertIn(b"episode-table-header", html)
+        self.assertIn(b"episode-table-row", html)
 
     def test_episode_notes_require_full_ai_conversion_and_stay_private(self):
         material_id = self.make_material()
