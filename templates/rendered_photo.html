@@ -1,5 +1,6 @@
 <article class="story-page" id="photo-{{ photo['id'] }}">
   <div class="story-page-top"><span class="story-page-index">{{ page_number }}쪽</span>{% if photo['rendered'] %}<span class="story-page-state">내용 정리됨</span>{% else %}<span class="story-page-state pending">내용 변환 전</span>{% endif %}</div>
+  {% if current_user and current_user['role'] == 'owner' %}<a class="story-note-entry" href="{{ url_for('study_note', photo_id=photo['id']) }}">{{ '✎ 저장한 메모 이어 쓰기' if photo.get('has_note') else '✎ 이 쪽을 누르고 메모하기' }} →</a>{% endif %}
   {% if photo['rendered'] %}
     {% if photo['rendered']['title'] %}<h3 class="story-page-title">{{ photo['rendered']['title'] }}</h3>{% endif %}
     {% for block in photo['rendered']['blocks'] %}<div class="story-block story-{{ block['kind'] }}">

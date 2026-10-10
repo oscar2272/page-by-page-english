@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="note-page">
+  <a class="back-link" href="{{ url_for('read_material', material_id=item['id'], packet_id=photo['packet_id']) if photo['packet_id'] else url_for('read_material', material_id=item['id']) }}#photo-{{ photo['id'] }}">← {{ packet['title'] if packet else item['title'] }} 읽기로 돌아가기</a>
+  <header class="note-heading"><span class="eyebrow">STUDY NOTE · {{ item['week_number'] }}주차 · {{ page_number }}/{{ total_pages }}쪽</span><h1>{{ packet['title'] if packet else item['title'] }} · 학습 메모</h1><p>이 쪽을 보며 궁금한 점과 어려웠던 부분을 적어 두세요. 저장한 글과 인식한 필기는 이후 문제와 부족한 부분 분석에 반영됩니다.</p><nav class="note-page-nav" aria-label="쪽 이동">{% if previous_photo_id %}<a href="{{ url_for('study_note', photo_id=previous_photo_id) }}">← 이전 쪽</a>{% endif %}{% if next_photo_id %}<a href="{{ url_for('study_note', photo_id=next_photo_id) }}">다음 쪽 →</a>{% endif %}</nav></header>
+  <div class="note-layout">
+    <section class="note-source"><h2>원본 자료</h2><img src="{{ url_for('photo_file', photo_id=photo['id'], kind='preview') }}" alt="{{ photo['original_name'] }} 원본"><a href="{{ url_for('photo_file', photo_id=photo['id'], kind='original') }}">촬영 원본 내려받기</a></section>
+    <section class="note-editor"><form id="study-note-form" method="post"><input type="hidden" name="_csrf" value="{{ csrf }}"><input type="hidden" name="drawing_data" id="drawing-data"><input type="hidden" name="clear_drawing" id="clear-drawing" value="0">
+      <label>키보드 메모<textarea name="body" rows="8" maxlength="8000" placeholder="예: did 뒤에는 동사원형이 오는 게 헷갈림. 수업에서 들은 예문…">{{ note['body'] if note else '' }}</textarea></label>
+      <div class="note-drawing-head"><h2>Apple Pencil 필기</h2><p>아래 흰 종이에 Pencil, 손가락 또는 마우스로 쓸 수 있습니다.</p></div>
+      <div class="note-tools"><button type="button" id="pen-tool" aria-pressed="true">펜</button><button type="button" id="eraser-tool" aria-pressed="false">지우개</button><button type="button" id="undo-stroke">되돌리기</button><button type="button" id="clear-strokes">필기 모두 지우기</button></div>
+      <canvas id="note-canvas" width="1200" height="720" data-existing="{{ url_for('study_note_drawing', photo_id=photo['id']) if note and note['drawing_path'] else '' }}" aria-label="손글씨 메모를 그리는 영역"></canvas>
+      <p class="field-help">필기를 바꾸거나 지우면 기존 인식 글은 다시 확인해야 합니다. 먼저 메모를 저장한 뒤 ‘필기 글자로 읽기’를 누르세요.</p>
+      {% if note and note['drawing_path'] %}<label>필기에서 읽어 낸 글 <span class="optional">직접 고칠 수 있습니다</span><textarea name="recognized_text" rows="5" maxlength="8000">{{ note['recognized_text'] }}</textarea></label>{% else %}<input type="hidden" name="recognized_text" value="">{% endif %}
+      <button class="button primary" type="submit">메모 저장</button>
+    </form>
+    {% if note and note['drawing_path'] %}<form method="post" action="{{ url_for('recognize_study_note', photo_id=photo['id']) }}" class="note-recognize"><input type="hidden" name="_csrf" value="{{ csrf }}"><button class="button outline" {% if not ai_ready %}disabled{% endif %}>저장한 필기 글자로 읽기 {{ '(Plus 이용량)' if ai_ready else '' }}</button></form>{% endif %}
+    {% if note %}<p class="field-help">마지막 저장: {{ note['updated_at'] }}</p>{% endif %}
+    </section>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='study_note.js') }}" defer></script>
+{% endblock %}

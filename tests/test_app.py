@@ -1,4 +1,5 @@
 import io
+import base64
 import re
 import tempfile
 import unittest
@@ -7,7 +8,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from app import create_app, db_connect, hash_password
+from app import create_app, db_connect, hash_password, lesson_text
 from scan import make_a4_preview
 
 
@@ -186,6 +187,58 @@ class StudyAppTests(unittest.TestCase):
             self.assertEqual(db.execute("SELECT COUNT(*) FROM ai_usage").fetchone()[0], 0)
             self.assertEqual(db.execute("SELECT status FROM render_jobs").fetchone()[0], "failed")
 
+    def test_owner_note_is_private_and_feeds_question_context(self):
+        material_id = self.make_material()
+        with db_connect(self.db_path) as db:
+            photo_id = db.execute("SELECT id FROM photos WHERE material_id = ?", (material_id,)).fetchone()[0]
+            packet_id = db.execute("SELECT packet_id FROM photos WHERE id = ?", (photo_id,)).fetchone()[0]
+        page = self.client.get(f"/photos/{photo_id}/note")
+        self.assertEqual(page.status_code, 200)
+        saved = self.client.post(f"/photos/{photo_id}/note", data={
+            "_csrf": csrf_from(page), "body": "did 뒤 동사원형이 헷갈림"}, follow_redirects=True)
+        self.assertIn("did 뒤 동사원형이 헷갈림".encode(), saved.data)
+        with db_connect(self.db_path) as db:
+            lesson = db.execute("SELECT * FROM materials WHERE id = ?", (material_id,)).fetchone()
+            self.assertIn("did 뒤 동사원형이 헷갈림", lesson_text(db, lesson))
+        self.assertIn("저장한 메모 이어 쓰기".encode(), self.client.get(f"/materials/{material_id}/read").data)
+        with patch("app.ai_ready", return_value=True), patch("app.call_ai", return_value={"questions": [{
+            "kind": "short", "prompt": "Did you go?", "answer": "Yes", "explanation": "test"}]}) as ai:
+            token = csrf_from(self.client.get(f"/materials/{material_id}/read"))
+            self.client.post(f"/materials/{material_id}/questions/generate", data={"_csrf": token})
+            self.assertIn("did 뒤 동사원형이 헷갈림", ai.call_args.args[0][0]["text"])
+        with patch("app.ai_ready", return_value=True), patch("app.call_ai", return_value={"report": "동사원형을 다시 확인할 후보"}):
+            insight = self.client.post(f"/materials/{material_id}/packets/{packet_id}/insight",
+                data={"_csrf": csrf_from(self.client.get(f"/materials/{material_id}/read"))}, follow_redirects=True)
+            self.assertIn("동사원형을 다시 확인할 후보".encode(), insight.data)
+        self.client.post("/logout", data={"_csrf": csrf_from(self.client.get("/"))})
+        self.assertEqual(self.client.get(f"/photos/{photo_id}/note").status_code, 302)
+        self.assertEqual(self.client.get(f"/photos/{photo_id}/note/drawing").status_code, 302)
+        self.login("reader", "reader-password-123")
+        self.assertEqual(self.client.get(f"/photos/{photo_id}/note").status_code, 403)
+        self.assertNotIn("did 뒤 동사원형이 헷갈림".encode(), self.client.get(f"/materials/{material_id}/read").data)
+
+    def test_pencil_drawing_is_saved_and_can_be_recognized_explicitly(self):
+        material_id = self.make_material()
+        with db_connect(self.db_path) as db:
+            photo_id = db.execute("SELECT id FROM photos WHERE material_id = ?", (material_id,)).fetchone()[0]
+        image = io.BytesIO()
+        Image.new("RGB", (1200, 720), "white").save(image, "PNG")
+        data = "data:image/png;base64," + base64.b64encode(image.getvalue()).decode()
+        page = self.client.get(f"/photos/{photo_id}/note")
+        saved = self.client.post(f"/photos/{photo_id}/note", data={
+            "_csrf": csrf_from(page), "body": "", "drawing_data": data}, follow_redirects=True)
+        self.assertEqual(saved.status_code, 200)
+        drawing_response = self.client.get(f"/photos/{photo_id}/note/drawing")
+        self.assertEqual(drawing_response.status_code, 200)
+        drawing_response.close()
+        with patch("app.ai_ready", return_value=True), patch("app.call_ai", return_value=(
+            {"text": "did + 동사원형", "uncertain": False}, {"input_tokens": 10, "output_tokens": 4})):
+            recognized = self.client.post(f"/photos/{photo_id}/note/recognize",
+                data={"_csrf": csrf_from(saved)}, follow_redirects=True)
+        self.assertIn("did + 동사원형".encode(), recognized.data)
+        with db_connect(self.db_path) as db:
+            self.assertEqual(db.execute("SELECT recognized_text FROM study_notes WHERE photo_id = ?", (photo_id,)).fetchone()[0], "did + 동사원형")
+
     def test_stapled_packets_keep_pages_and_notes_separate(self):
         self.login("owner", "owner-password-123")
         def page(name):
@@ -253,7 +306,7 @@ class StudyAppTests(unittest.TestCase):
             material_id = db.execute("SELECT id FROM materials").fetchone()["id"]
             did_id = db.execute("SELECT id FROM material_packets WHERE title = 'did'").fetchone()["id"]
         page = self.client.get(f"/materials/{material_id}")
-        self.assertIn("1번째 묶음 / 전체 2개".encode(), page.data)
+        self.assertIn("1회차 / 전체 2회차".encode(), page.data)
         self.assertNotIn(b'name="position"', page.data)
         token = csrf_from(page)
         self.client.post(f"/materials/{material_id}/packets/{did_id}/order",
