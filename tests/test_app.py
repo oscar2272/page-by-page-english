@@ -575,6 +575,20 @@ class StudyAppTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "추가 과금"):
                 call_ai([], {}, "test", "test")
 
+    def test_plus_plan_uses_separate_token_path_while_paid_api_is_off(self):
+        import json
+        from app import ai_ready, call_ai, paid_ai_ready
+
+        credential = Path(self.app.instance_path) / "chatgpt-plan.json"
+        credential.write_text(json.dumps({"scopes": ["chatgpt.tokens.use.direct"], "refresh_token": "test-refresh"}))
+        with self.app.test_request_context("/"), patch("app.call_plan_ai", return_value=({"ok": True}, {"input_tokens": 2}, "gpt-6.1-sol")) as plan_call:
+            self.assertFalse(paid_ai_ready())
+            self.assertTrue(ai_ready())
+            result, usage = call_ai([], {}, "test", "test", include_usage=True)
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(usage["input_tokens"], 2)
+        plan_call.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

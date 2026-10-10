@@ -35,7 +35,9 @@ uv run python app.py
 
 Oracle Cloud의 Japan East (Tokyo) 홈 리전에 있는 Always Free 대상 `VM.Standard.E2.1.Micro`에서 실행 중입니다. 휴대폰·아이패드 브라우저에서 [Page by Page](https://161-33-169-174.sslip.io/)에 접속할 수 있습니다. 소유자 아이디는 `oscar2272`이고, 초기 비밀번호는 이 컴퓨터의 `~/.ssh/page-by-page-owner-login` 두 번째 줄에만 보관했습니다. 로그인 후 **계정** 화면에서 비밀번호를 변경하세요. 이 파일과 SSH 개인키 `~/.ssh/page-by-page-oci`를 안전하게 보관하세요.
 
-현재 서버에는 DeepL 번역 키와 소유자가 직접 등록한 OpenAI API 키가 설정되어 있습니다. ChatGPT Plus 요금과 API 키 요금은 별개이므로, 추가 과금을 막기 위해 **OpenAI API 자동 기능은 중지**했습니다. 추가 API 요금 없이 사진을 정리하려면 Plus에 포함된 Codex에서 소유자가 작업을 요청하고 결과를 사이트에 반영할 수 있습니다. 이 방식은 업로드 직후 자동 변환은 아니며 Plus 이용량 제한을 따릅니다. 공식 Sign in with ChatGPT를 통한 Plus 이용량 연결은 별도 OAuth 동의가 필요합니다. 오픈소스 앱의 개인 VM 실행은 문서화되어 있지만 이 비공개 소스의 원격 웹앱이 해당 경로를 이용할 수 있는지는 확인되지 않았습니다. `sslip.io` 주소는 VM의 공인 IP에 연결되므로 공인 IP가 바뀌면 새 주소를 설정해야 합니다.
+현재 서버에는 DeepL 번역 키와 소유자가 직접 등록한 OpenAI API 키가 설정되어 있습니다. ChatGPT Plus 요금과 API 키 요금은 별개이므로, 추가 과금을 막기 위해 **OpenAI API 자동 기능은 중지**했습니다. 추가 API 요금 없이 사진을 정리하려면 Plus에 포함된 Codex에서 소유자가 작업을 요청하고 결과를 사이트에 반영할 수 있습니다. 이 방식은 업로드 직후 자동 변환은 아니며 Plus 이용량 제한을 따릅니다. 공식 Sign in with ChatGPT를 통한 Plus 이용량 연결은 별도 OAuth 동의가 필요합니다. 공개 소스 앱의 개인 VM 실행은 공식 문서에 안내되어 있으나, 현재 웹앱에서의 실제 연결은 검증 중입니다. `sslip.io` 주소는 VM의 공인 IP에 연결되므로 공인 IP가 바뀌면 새 주소를 설정해야 합니다.
+
+앱 코드는 [공개 GitHub 저장소](https://github.com/oscar2272/page-by-page-english)에 MIT 라이선스로 공개했습니다. 사진·계정 DB·API 키·백업은 저장소에 포함하지 않습니다. Plus OAuth 연결은 소유자 컴퓨터에서 `uv run python scripts/chatgpt_plan_auth.py login`을 실행해 공식 동의 화면을 여는 시험 단계입니다. `instance/chatgpt-plan.json`에 저장되는 OAuth 자격 정보는 공유하거나 Git에 올리지 마세요. 아직 VM의 자동 AI 기능과 연결되지 않았고, 유료 API 기능은 계속 꺼져 있습니다.
 
 사진별 자동 정리 기능은 비용을 줄이기 위해 GPT-4.1 mini와 최대 출력 8,000토큰으로 준비해 두었습니다. 매주 약 10장의 사용량을 고려해 한 번의 변환 비용을 낮추되, 실제 필기 인식 품질은 시험 전입니다. API 사용 설정은 계속 꺼져 있으며, 소유자의 동의 없이는 유료 요청을 보내지 않습니다.
 

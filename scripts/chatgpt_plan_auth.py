@@ -71,7 +71,11 @@ def validate_id_token(token, client_id, nonce):
     if discovery.get("issuer") != ISSUER:
         raise ValueError("예상하지 않은 인증 발급자입니다.")
     key = jwt.PyJWKClient(discovery["jwks_uri"]).get_signing_key_from_jwt(token)
-    claims = jwt.decode(token, key.key, algorithms=["RS256"], audience=client_id, issuer=ISSUER)
+    claims = jwt.decode(token, key.key, algorithms=["RS256"], audience=client_id, issuer=ISSUER,
+                        options={"verify_iat": False})
+    clock_difference = int(claims.get("iat", 0) - time.time())
+    if clock_difference > 300:
+        raise ValueError(f"인증서의 발급 시각이 현재 시각보다 {clock_difference}초 앞섭니다.")
     if claims.get("nonce") != nonce or not claims.get("sub"):
         raise ValueError("인증 응답 검증에 실패했습니다.")
     return claims
@@ -80,6 +84,8 @@ def validate_id_token(token, client_id, nonce):
 def login():
     previous = load_private()
     host_id = previous.get("ext_agent_host_id") or "urn:uuid:" + str(uuid.uuid4())
+    if not previous:
+        save_private({"ext_agent_host_id": host_id})
     verifier = secrets.token_urlsafe(64)
     state = secrets.token_urlsafe(32)
     nonce = secrets.token_urlsafe(32)
@@ -140,6 +146,8 @@ def login():
         raise RuntimeError("발급된 OAuth client_id를 받지 못했습니다.")
     if previous.get("client_id") and issued_id != previous["client_id"]:
         raise RuntimeError("저장된 계정과 다른 OAuth 클라이언트가 반환됐습니다.")
+    if not previous.get("client_id"):
+        save_private({"ext_agent_host_id": host_id, "client_id": issued_id})
     token = exchange_token({
         "grant_type": "authorization_code",
         "client_id": issued_id,

@@ -4,6 +4,7 @@ RUN pip install --no-cache-dir uv==0.10.4
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 COPY app.py ./
+COPY plan_ai.py ./
 COPY scan.py ./
 COPY templates ./templates
 COPY static ./static
