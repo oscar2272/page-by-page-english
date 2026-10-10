@@ -75,3 +75,19 @@
 .episode-margin-note{height:0;margin:0;z-index:1}
 .episode-margin-note p{position:absolute;left:-28px;top:5px;font-size:20px;line-height:1}
 .episode-edit-link{display:block;text-align:right;font-size:12px;color:#555;margin:5px 0 0}
+.episode-table-row .episode-explanation,.episode-table-header .episode-explanation{position:absolute;right:6px;top:5px;z-index:4;margin:0;padding:0;border:0;background:#fff;box-shadow:none}
+.episode-table-row .episode-explanation summary,.episode-table-header .episode-explanation summary{font-size:0;line-height:1;list-style:none;cursor:pointer}
+.episode-table-row .episode-explanation summary::after,.episode-table-header .episode-explanation summary::after{content:'ⓘ';font-size:14px;color:#555}
+.episode-table-row .episode-explanation[open],.episode-table-header .episode-explanation[open]{right:0;top:0;width:min(290px,85%);padding:10px;border:1px solid #888;box-shadow:0 3px 12px #0002}
+.episode-table-row .episode-explanation[open] summary,.episode-table-header .episode-explanation[open] summary{font-size:12px}
+.episode-table-row .episode-explanation[open] summary::after,.episode-table-header .episode-explanation[open] summary::after{content:''}
+.episode-margin-note .episode-explanation{position:absolute;left:-14px;top:24px;z-index:4;background:#fff;padding:0;border:0;margin:0}
+.episode-margin-note .episode-explanation summary{font-size:0;list-style:none}
+.episode-margin-note .episode-explanation summary::after{content:'ⓘ';font-size:12px}
+.episode-margin-note .episode-explanation[open]{width:240px;padding:10px;border:1px solid #aaa;box-shadow:0 3px 12px #0002}
+.episode-margin-note .episode-explanation[open] summary{font-size:12px}
+.episode-margin-note .episode-explanation[open] summary::after{content:''}
+.episode-margin-note small{display:none}
+.episode-source{margin:12px 0 0}
+.episode-segment{padding-bottom:10px}
+.episode-segment+.episode-segment{padding-top:10px}
