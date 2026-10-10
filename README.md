@@ -72,3 +72,5 @@ HTML 저장 파일에는 사진 미리보기가 포함됩니다. PDF는 자료 �
 테스트: `uv run python -m unittest discover -s tests -v`
 
 요구사항은 [docs/requirements.md](docs/requirements.md), 프로젝트 전용 Codex 스킬은 `~/.codex/skills/english-study-organizer/SKILL.md`에 있습니다.
+
+변환이 끝난 회차에서는 소유자가 본문 위에 Apple Pencil로 직접 필기할 수 있습니다. 화면 아래 도구에서 Pencil/지우개/읽기를 바꾸고, 필기는 쪽별로 자동 저장됩니다. 손가락은 스크롤에 사용합니다. `필기 글자 확인`에서 명시적으로 AI 인식 후 수정한 내용은 문제 생성과 복습 분석에 반영됩니다. 변환 전 원본 사진에는 필기할 수 없습니다.

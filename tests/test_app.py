@@ -1,5 +1,6 @@
 import io
 import base64
+import json
 import re
 import tempfile
 import unittest
@@ -202,6 +203,7 @@ class StudyAppTests(unittest.TestCase):
             photo_id, packet_id = photo["id"], photo["packet_id"]
         before = self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}")
         self.assertNotIn(b'id="place-note"', before.data)
+        self.assertNotIn(b'episode-ink-layer', before.data)
         note_url = f"/materials/{material_id}/packets/{packet_id}/annotations"
         self.assertEqual(self.client.post(note_url, data={"_csrf": csrf_from(before), "photo_id": photo_id,
             "anchor_y": "4321", "body": "did 뒤 동사원형이 헷갈림"}).status_code, 400)
@@ -209,6 +211,8 @@ class StudyAppTests(unittest.TestCase):
         page = self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}")
         self.assertIn(b'id="place-note"', page.data)
         self.assertIn(b'id="episode-stream"', page.data)
+        self.assertIn(b'episode-ink-layer', page.data)
+        self.assertIn(b'id="ink-pen"', page.data)
         self.assertNotIn(b'class="story-page"', page.data)
         self.assertNotIn(b'class="episode-original"', page.data)
         self.assertEqual(self.client.get(f"/photos/{photo_id}/note").status_code, 404)
@@ -237,6 +241,25 @@ class StudyAppTests(unittest.TestCase):
         self.assertNotIn("did 뒤 동사원형이 헷갈림".encode(), self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}").data)
         self.login("reader", "reader-password-123")
         self.assertEqual(self.client.post(f"/annotations/{note_id}/delete", data={"_csrf": csrf_from(self.client.get("/"))}).status_code, 403)
+
+    def test_episode_ink_is_private_and_used_after_review(self):
+        material_id = self.make_material()
+        photo_id, packet_id = self.converted_episode(material_id)
+        page = self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}")
+        url = f"/materials/{material_id}/packets/{packet_id}/ink/{photo_id}"
+        strokes = json.dumps([{"tool": "pen", "points": [[0.1, 0.2], [0.3, 0.4]]}])
+        saved = self.client.post(url, data={"_csrf": csrf_from(page), "strokes": strokes, "recognized_text": "did + 동사원형"})
+        self.assertEqual(saved.status_code, 200)
+        with db_connect(self.db_path) as db:
+            lesson = db.execute("SELECT * FROM materials WHERE id = ?", (material_id,)).fetchone()
+            self.assertIn("did + 동사원형", lesson_text(db, lesson))
+        changed = json.dumps([{"tool": "pen", "points": [[0.2, 0.2]]}])
+        response = self.client.post(url, data={"_csrf": csrf_from(page), "strokes": changed, "recognized_text": "did + 동사원형"})
+        self.assertEqual(response.json["recognized_text"], "")
+        self.client.post("/logout", data={"_csrf": csrf_from(self.client.get("/"))})
+        self.assertNotIn(b'episode-ink-data', self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}").data)
+        self.login("reader", "reader-password-123")
+        self.assertEqual(self.client.post(url, data={"_csrf": csrf_from(self.client.get("/")), "strokes": strokes}).status_code, 403)
 
     def test_episode_pencil_note_can_be_recognized_on_explicit_request(self):
         material_id = self.make_material()
