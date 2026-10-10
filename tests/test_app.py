@@ -187,57 +187,75 @@ class StudyAppTests(unittest.TestCase):
             self.assertEqual(db.execute("SELECT COUNT(*) FROM ai_usage").fetchone()[0], 0)
             self.assertEqual(db.execute("SELECT status FROM render_jobs").fetchone()[0], "failed")
 
-    def test_owner_note_is_private_and_feeds_question_context(self):
+    def converted_episode(self, material_id):
+        with db_connect(self.db_path) as db:
+            photo = db.execute("SELECT id, packet_id FROM photos WHERE material_id = ?", (material_id,)).fetchone()
+            db.execute("UPDATE photos SET rendered_json = ? WHERE id = ?",
+                       ('{"title":"Did","blocks":[{"kind":"text","text":"Did you go?","explanation":"","uncertain":false}]}', photo["id"]))
+            db.execute("INSERT INTO render_jobs(packet_id, status, completed, total) VALUES (?, 'succeeded', 1, 1)", (photo["packet_id"],))
+            return photo["id"], photo["packet_id"]
+
+    def test_episode_notes_require_full_ai_conversion_and_stay_private(self):
         material_id = self.make_material()
         with db_connect(self.db_path) as db:
-            photo_id = db.execute("SELECT id FROM photos WHERE material_id = ?", (material_id,)).fetchone()[0]
-            packet_id = db.execute("SELECT packet_id FROM photos WHERE id = ?", (photo_id,)).fetchone()[0]
-        page = self.client.get(f"/photos/{photo_id}/note")
-        self.assertEqual(page.status_code, 200)
-        saved = self.client.post(f"/photos/{photo_id}/note", data={
-            "_csrf": csrf_from(page), "body": "did 뒤 동사원형이 헷갈림"}, follow_redirects=True)
-        self.assertIn("did 뒤 동사원형이 헷갈림".encode(), saved.data)
+            photo = db.execute("SELECT id, packet_id FROM photos WHERE material_id = ?", (material_id,)).fetchone()
+            photo_id, packet_id = photo["id"], photo["packet_id"]
+        before = self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}")
+        self.assertNotIn(b'id="place-note"', before.data)
+        note_url = f"/materials/{material_id}/packets/{packet_id}/annotations"
+        self.assertEqual(self.client.post(note_url, data={"_csrf": csrf_from(before), "photo_id": photo_id,
+            "anchor_y": "4321", "body": "did 뒤 동사원형이 헷갈림"}).status_code, 400)
+        self.converted_episode(material_id)
+        page = self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}")
+        self.assertIn(b'id="place-note"', page.data)
+        self.assertIn(b'id="episode-stream"', page.data)
+        self.assertNotIn(b'class="story-page"', page.data)
+        self.assertNotIn(b'class="episode-original"', page.data)
+        self.assertEqual(self.client.get(f"/photos/{photo_id}/note").status_code, 404)
+        saved = self.client.post(note_url, data={"_csrf": csrf_from(page), "photo_id": photo_id,
+            "anchor_y": "4321", "body": "did 뒤 동사원형이 헷갈림"})
+        self.assertEqual(saved.status_code, 200)
+        note_id = saved.json["id"]
+        second = self.client.post(note_url, data={"_csrf": csrf_from(page), "photo_id": photo_id,
+            "anchor_y": "8123", "body": "다른 위치의 메모"})
+        self.assertEqual(second.status_code, 200)
         with db_connect(self.db_path) as db:
             lesson = db.execute("SELECT * FROM materials WHERE id = ?", (material_id,)).fetchone()
             self.assertIn("did 뒤 동사원형이 헷갈림", lesson_text(db, lesson))
-        self.assertIn("저장한 메모 이어 쓰기".encode(), self.client.get(f"/materials/{material_id}/read").data)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM episode_annotations").fetchone()[0], 2)
         with patch("app.ai_ready", return_value=True), patch("app.call_ai", return_value={"questions": [{
             "kind": "short", "prompt": "Did you go?", "answer": "Yes", "explanation": "test"}]}) as ai:
-            token = csrf_from(self.client.get(f"/materials/{material_id}/read"))
-            self.client.post(f"/materials/{material_id}/questions/generate", data={"_csrf": token})
+            self.client.post(f"/materials/{material_id}/questions/generate", data={"_csrf": csrf_from(page)})
             self.assertIn("did 뒤 동사원형이 헷갈림", ai.call_args.args[0][0]["text"])
-        with patch("app.ai_ready", return_value=True), patch("app.call_ai", return_value={"report": "동사원형을 다시 확인할 후보"}):
+        with patch("app.ai_ready", return_value=True), patch("app.call_ai", return_value={"report": "동사원형 복습 후보"}):
             insight = self.client.post(f"/materials/{material_id}/packets/{packet_id}/insight",
-                data={"_csrf": csrf_from(self.client.get(f"/materials/{material_id}/read"))}, follow_redirects=True)
-            self.assertIn("동사원형을 다시 확인할 후보".encode(), insight.data)
+                data={"_csrf": csrf_from(page)}, follow_redirects=True)
+            self.assertIn("동사원형 복습 후보".encode(), insight.data)
         self.client.post("/logout", data={"_csrf": csrf_from(self.client.get("/"))})
-        self.assertEqual(self.client.get(f"/photos/{photo_id}/note").status_code, 302)
-        self.assertEqual(self.client.get(f"/photos/{photo_id}/note/drawing").status_code, 302)
+        self.assertNotIn("did 뒤 동사원형이 헷갈림".encode(), self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}").data)
         self.login("reader", "reader-password-123")
-        self.assertEqual(self.client.get(f"/photos/{photo_id}/note").status_code, 403)
-        self.assertNotIn("did 뒤 동사원형이 헷갈림".encode(), self.client.get(f"/materials/{material_id}/read").data)
+        self.assertEqual(self.client.post(f"/annotations/{note_id}/delete", data={"_csrf": csrf_from(self.client.get("/"))}).status_code, 403)
 
-    def test_pencil_drawing_is_saved_and_can_be_recognized_explicitly(self):
+    def test_episode_pencil_note_can_be_recognized_on_explicit_request(self):
         material_id = self.make_material()
-        with db_connect(self.db_path) as db:
-            photo_id = db.execute("SELECT id FROM photos WHERE material_id = ?", (material_id,)).fetchone()[0]
+        photo_id, packet_id = self.converted_episode(material_id)
         image = io.BytesIO()
         Image.new("RGB", (1200, 720), "white").save(image, "PNG")
         data = "data:image/png;base64," + base64.b64encode(image.getvalue()).decode()
-        page = self.client.get(f"/photos/{photo_id}/note")
-        saved = self.client.post(f"/photos/{photo_id}/note", data={
-            "_csrf": csrf_from(page), "body": "", "drawing_data": data}, follow_redirects=True)
+        page = self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}")
+        saved = self.client.post(f"/materials/{material_id}/packets/{packet_id}/annotations", data={
+            "_csrf": csrf_from(page), "photo_id": photo_id, "anchor_y": "5000", "drawing_data": data})
         self.assertEqual(saved.status_code, 200)
-        drawing_response = self.client.get(f"/photos/{photo_id}/note/drawing")
-        self.assertEqual(drawing_response.status_code, 200)
-        drawing_response.close()
+        note_id = saved.json["id"]
+        drawing = self.client.get(f"/annotations/{note_id}/drawing")
+        self.assertEqual(drawing.status_code, 200)
+        drawing.close()
         with patch("app.ai_ready", return_value=True), patch("app.call_ai", return_value=(
             {"text": "did + 동사원형", "uncertain": False}, {"input_tokens": 10, "output_tokens": 4})):
-            recognized = self.client.post(f"/photos/{photo_id}/note/recognize",
-                data={"_csrf": csrf_from(saved)}, follow_redirects=True)
-        self.assertIn("did + 동사원형".encode(), recognized.data)
+            recognized = self.client.post(f"/annotations/{note_id}/recognize", data={"_csrf": csrf_from(page)})
+        self.assertEqual(recognized.json["recognized_text"], "did + 동사원형")
         with db_connect(self.db_path) as db:
-            self.assertEqual(db.execute("SELECT recognized_text FROM study_notes WHERE photo_id = ?", (photo_id,)).fetchone()[0], "did + 동사원형")
+            self.assertEqual(db.execute("SELECT recognized_text FROM episode_annotations WHERE id = ?", (note_id,)).fetchone()[0], "did + 동사원형")
 
     def test_stapled_packets_keep_pages_and_notes_separate(self):
         self.login("owner", "owner-password-123")
