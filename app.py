@@ -1723,6 +1723,11 @@ def create_app(test_config: dict | None = None) -> Flask:
             flash("ChatGPT Plus 연결 또는 AI 기능 설정이 필요합니다.", "error")
         elif any(photo["rendered_json"] for photo in photos) and request.form.get("replace") != "1":
             flash("기존 정리본을 덮어쓰려면 확인을 선택해 주세요.", "error")
+        elif request.form.get("replace") == "1" and (
+            db.execute("SELECT 1 FROM episode_annotations WHERE packet_id = ? LIMIT 1", (packet_id,)).fetchone()
+            or db.execute("SELECT 1 FROM episode_ink WHERE packet_id = ? AND (strokes_json != '[]' OR recognized_text != '') LIMIT 1", (packet_id,)).fetchone()
+        ):
+            flash("기존 메모·필기의 위치를 먼저 옮겨야 다시 분석할 수 있습니다.", "error")
         elif db.execute("SELECT 1 FROM render_jobs WHERE packet_id = ? AND status = 'running'", (packet_id,)).fetchone():
             flash("이미 이 묶음을 변환 중입니다.", "error")
         else:
