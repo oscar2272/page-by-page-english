@@ -91,5 +91,6 @@
 .episode-source{margin:12px 0 0}
 .episode-segment{padding-bottom:10px}
 .episode-segment+.episode-segment{padding-top:10px}
+.worksheet-region{margin:0 0 16px}.worksheet-region .episode-block{margin:0;padding:0}.worksheet-region .episode-block+.episode-block{margin-top:9px}.worksheet-callout{padding:15px 19px}.worksheet-list{padding-left:24px}.worksheet-list .episode-block{list-style:decimal;display:list-item;margin-left:18px}.worksheet-bordered{border:1px solid #555}.worksheet-table{border:1px solid #555}.worksheet-table .episode-block+.episode-block{margin-top:0;border-top:1px solid #555}.worksheet-cells{display:flex}.worksheet-cells span{flex:1;min-width:0;padding:7px 10px;white-space:pre-wrap;overflow-wrap:anywhere}.worksheet-cells span+span{border-left:1px solid #555}.worksheet-text-bold>p,.worksheet-text-bold>h3,.worksheet-text-bold .worksheet-cells{font-weight:700}.worksheet-text-italic>p,.worksheet-text-italic>h3,.worksheet-text-italic .worksheet-cells{font-style:italic}.worksheet-text-underline>p,.worksheet-text-underline>h3,.worksheet-text-underline .worksheet-cells{text-decoration:underline}
 .episode-document-title h3{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px;font-size:22px}
 .episode-subtitle p{font-style:italic}

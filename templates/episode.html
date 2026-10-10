@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% from 'worksheet_regions.html' import render as render_worksheet %}
 {% block content %}
 <div class="episode" id="episode" data-save-url="{{ url_for('save_episode_annotation', material_id=item['id'], packet_id=packet['id']) }}" data-csrf="{{ csrf }}" data-ai-ready="{{ '1' if ai_ready else '0' }}">
   <a class="back-link" href="{{ url_for('material_detail', material_id=item['id']) }}">← 수업으로 돌아가기</a>
@@ -16,6 +17,9 @@
   {% for photo in packet['photos'] %}<section class="episode-segment{{ ' unconverted' if not fully_rendered else '' }}" id="photo-{{ photo['id'] }}" data-photo-id="{{ photo['id'] }}" aria-label="{{ loop.index }}쪽">
     {% if fully_rendered %}
       {% if photo['rendered']['show_title'] %}<h2>{{ photo['rendered']['title'] }}</h2>{% endif %}
+      {% if photo['rendered'].get('version') == 2 %}
+        {{ render_worksheet(photo['rendered']) }}
+      {% else %}
       {% for block in photo['rendered']['blocks'] %}<div class="episode-block episode-{{ block['kind'] }} episode-{{ block['appearance']|replace('_', '-') }}{{ ' shaded-continuation' if block['shaded_continuation'] else '' }}" data-block-index="{{ loop.index0 }}">
         {% if block['cells'] %}<div class="episode-cells"><span>{{ block['cells'][0] }}</span><span>{{ block['cells'][1] }}</span></div>
         {% elif block['callout_head'] %}<p class="episode-callout-head">{{ block['callout_head'] }}</p>{% if block['callout_body'] %}<p class="episode-callout-body">{{ block['callout_body'] }}</p>{% endif %}
@@ -23,6 +27,7 @@
         {% elif block['kind'] == 'heading' %}<h3>{{ block['text'] }}</h3>{% else %}<p>{{ block['text'] }}</p>{% endif %}
         {% if block['explanation'] %}<details class="episode-explanation"><summary>{{ '필기 해설' if block['kind'] == 'handwriting' else '설명' }}</summary><p>{{ block['explanation'] }}</p></details>{% endif %}{% if block['uncertain'] %}<small>원본 확인 필요</small>{% endif %}
       </div>{% endfor %}
+      {% endif %}
       <details class="episode-source"><summary>{{ loop.index }}쪽 촬영 원본 보기</summary><img src="{{ url_for('photo_file', photo_id=photo['id'], kind='preview') }}" alt="{{ loop.index }}쪽 원본" loading="lazy"></details>{% if current_user and current_user['role'] == 'owner' %}<a class="episode-edit-link" href="{{ url_for('edit_rendered_page', photo_id=photo['id']) }}">{{ loop.index }}쪽 내용·디자인 수정</a>{% endif %}
       {% if current_user and current_user['role'] == 'owner' %}<canvas class="episode-ink-layer" data-save-url="{{ url_for('save_episode_ink', material_id=item['id'], packet_id=packet['id'], photo_id=photo['id']) }}" data-recognize-url="{{ url_for('recognize_episode_ink', material_id=item['id'], packet_id=packet['id'], photo_id=photo['id']) }}" aria-label="{{ loop.index }}쪽 본문 위 Apple Pencil 필기"></canvas>{% endif %}
     {% else %}<img class="episode-original" src="{{ url_for('photo_file', photo_id=photo['id'], kind='preview') }}" alt="{{ loop.index }}쪽 원본" loading="lazy">{% endif %}

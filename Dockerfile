@@ -6,6 +6,7 @@ RUN uv sync --frozen --no-dev
 COPY app.py ./
 COPY plan_ai.py ./
 COPY scan.py ./
+COPY worksheet_layout.py ./
 COPY templates ./templates
 COPY static ./static
 ENV INSTANCE_DIR=/data PYTHONUNBUFFERED=1

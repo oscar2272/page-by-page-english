@@ -41,7 +41,7 @@ Oracle Cloud의 Japan East (Tokyo) 홈 리전에 있는 Always Free 대상 `VM.S
 
 앱 코드는 [공개 GitHub 저장소](https://github.com/oscar2272/page-by-page-english)에 MIT 라이선스로 공개했습니다. 사진·계정 DB·API 키·백업은 저장소에 포함하지 않습니다. Plus OAuth 최초 연결은 소유자 컴퓨터에서 `uv run python scripts/chatgpt_plan_auth.py login`을 실행하고 공식 동의 화면에서 직접 승인합니다. `instance/chatgpt-plan.json`에 저장되는 OAuth 자격 정보는 공유하거나 Git에 올리지 마세요. 서버에는 별도 호스트 ID를 부여한 비공개 사본을 SSH로 전달하며, 이후 토큰 갱신은 서버가 담당합니다.
 
-별도 유료 API 경로는 비용을 줄이기 위해 GPT-4.1 mini와 최대 출력 8,000토큰으로 준비해 두었지만 사용 중지 상태입니다. Plus 경로는 해당 계정에서 제공하는 모델 `gpt-6.1-sol`을 사용합니다. 손글씨 판독에는 원본 확인이 필요한 항목이 있으므로 소유자가 비교해 수정해야 합니다. HTML 회차는 원본의 회색 설명 상자, 두 열 표, 예문 목록을 가능한 한 보존하고, 쪽별 편집 화면에서 디자인 종류를 고칠 수 있습니다.
+별도 유료 API 경로는 비용을 줄이기 위해 GPT-4.1 mini와 최대 출력 8,000토큰으로 준비해 두었지만 사용 중지 상태입니다. Plus 경로는 해당 계정에서 제공하는 모델 `gpt-6.1-sol`을 사용합니다. 새 변환 형식은 원문과 함께 원본의 설명 상자·표·목록·배경색·테두리·글자 스타일을 영역 데이터로 저장하며, 회차와 HTML/PDF 출력에서 같은 구조를 사용합니다. 쪽별 편집 화면에서 원본과 비교해 영역과 글을 수정할 수 있습니다. 기존 9쪽은 이전 형식이므로 새 구조가 자동 적용되지는 않으며 재분석이 필요합니다. 재분석 전에 기존 필기와 위치 메모의 정렬을 확인해야 합니다.
 
 서버 코드는 `/home/ubuntu/page-by-page`, SQLite DB와 사진은 Docker의 `page-by-page_study_data` 볼륨에 있습니다. Caddy가 HTTPS 인증서를 자동 관리합니다. 1GB 메모리 VM에 맞춰 Gunicorn 작업자는 1개입니다. 재시작 뒤에도 소유자 로그인이 유지되는 것을 확인했습니다.
 

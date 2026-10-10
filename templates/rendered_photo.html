@@ -1,13 +1,15 @@
+{% from 'worksheet_regions.html' import render as render_worksheet %}
 <article class="story-page" id="photo-{{ photo['id'] }}">
   <div class="story-page-top"><span class="story-page-index">{{ page_number }}쪽</span>{% if photo['rendered'] %}<span class="story-page-state">내용 정리됨</span>{% else %}<span class="story-page-state pending">내용 변환 전</span>{% endif %}</div>
   {% if photo['rendered'] %}
     {% if photo['rendered']['title'] %}<h3 class="story-page-title">{{ photo['rendered']['title'] }}</h3>{% endif %}
+    {% if photo['rendered'].get('version') == 2 %}{{ render_worksheet(photo['rendered']) }}{% else %}
     {% for block in photo['rendered']['blocks'] %}<div class="story-block story-{{ block['kind'] }}">
       {% if block['kind'] == 'handwriting' %}<span class="story-label">손글씨 필기</span>{% elif block['kind'] == 'example' %}<span class="story-label">예문</span>{% elif block['kind'] == 'exercise' %}<span class="story-label">문제·연습</span>{% endif %}
       {% if block['kind'] == 'heading' %}<h4>{{ block['text'] }}</h4>{% else %}<p class="story-text">{{ block['text'] }}</p>{% endif %}
       {% if block['explanation'] %}<details class="story-explanation"><summary>{{ '필기 해설' if block['kind'] == 'handwriting' else '설명' }}</summary><p>{{ block['explanation'] }}</p></details>{% endif %}
       {% if block['uncertain'] %}<p class="story-uncertain">⚑ 원본 확인 필요</p>{% endif %}
-    </div>{% endfor %}
+    </div>{% endfor %}{% endif %}
   {% else %}<p class="story-unrendered">AI 정리 전 원본 사진입니다.</p><img class="story-pending-photo" src="{{ url_for('photo_file', photo_id=photo['id'], kind='preview') }}" alt="{{ photo['original_name'] }} 원본" loading="lazy">{% endif %}
   <details class="story-source"><summary>원본 사진 확인</summary><img src="{{ url_for('photo_file', photo_id=photo['id'], kind='preview') }}" alt="{{ photo['original_name'] }} 원본" loading="lazy"><a href="{{ url_for('photo_file', photo_id=photo['id'], kind='original') }}">촬영 원본 내려받기</a></details>
   {% if current_user and current_user['role'] == 'owner' %}<div class="story-owner-actions"><a class="button outline" href="{{ url_for('edit_rendered_page', photo_id=photo['id']) }}">이 쪽 내용·필기 수정</a></div>{% endif %}

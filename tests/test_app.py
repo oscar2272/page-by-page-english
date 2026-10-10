@@ -11,6 +11,7 @@ from PIL import Image
 
 from app import create_app, db_connect, display_page, hash_password, lesson_text
 from scan import make_a4_preview
+from worksheet_layout import normalize_page
 
 
 def csrf_from(response):
@@ -139,6 +140,45 @@ class StudyAppTests(unittest.TestCase):
         ai_attempt = self.client.post(f"/photos/{photo_id}/render/ai", data={"_csrf": csrf_from(saved)})
         self.assertEqual(ai_attempt.status_code, 302)
 
+    def test_versioned_layout_keeps_callout_and_table_without_word_rules(self):
+        material_id = self.make_material()
+        with db_connect(self.db_path) as db:
+            photo = db.execute("SELECT id, packet_id FROM photos WHERE material_id = ?", (material_id,)).fetchone()
+            photo_id, packet_id = photo["id"], photo["packet_id"]
+            page = normalize_page({"title": "Worksheet", "blocks": [
+                {"kind": "text", "text": "A = B", "explanation": "", "uncertain": False,
+                 "region": "callout", "group": 0, "background": "#e6e6e6", "border": False,
+                 "text_style": "bold", "cells": []},
+                {"kind": "text", "text": "Description", "explanation": "", "uncertain": False,
+                 "region": "callout", "group": 0, "background": "#e6e6e6", "border": False,
+                 "text_style": "normal", "cells": []},
+                {"kind": "heading", "text": "", "explanation": "", "uncertain": False,
+                 "region": "table", "group": 1, "background": "", "border": True,
+                 "text_style": "bold", "cells": ["First", "Second"]},
+                {"kind": "text", "text": "", "explanation": "", "uncertain": False,
+                 "region": "table", "group": 1, "background": "", "border": True,
+                 "text_style": "normal", "cells": ["One", "Two"]},
+            ]})
+            db.execute("UPDATE photos SET rendered_json = ? WHERE id = ?", (json.dumps(page), photo_id))
+            db.execute("INSERT INTO render_jobs(packet_id, status, total, completed) VALUES (?, 'succeeded', 1, 1)", (packet_id,))
+            db.commit()
+        episode = self.client.get(f"/materials/{material_id}/read?packet_id={packet_id}")
+        self.assertEqual(episode.status_code, 200)
+        self.assertIn(b"worksheet-callout", episode.data)
+        self.assertIn(b"worksheet-table", episode.data)
+        self.assertIn(b"background-color:#e6e6e6", episode.data)
+        printed = self.client.get(f"/materials/{material_id}/print")
+        self.assertIn(b"worksheet-callout", printed.data)
+        self.assertIn(b"worksheet-table", printed.data)
+        editor = self.client.get(f"/photos/{photo_id}/render/edit")
+        self.assertEqual(editor.status_code, 200)
+        self.assertIn(b"block_group_0", editor.data)
+        self.assertEqual(display_page(page)["regions"][0]["blocks"][1]["index"], 1)
+        broken = {**page, "blocks": [dict(block) for block in page["blocks"]]}
+        broken["blocks"][-1]["cells"] = ["One"]
+        with self.assertRaises(ValueError):
+            normalize_page(broken)
+
     def test_one_page_ai_result_is_saved_with_usage_and_no_other_pages_changed(self):
         material_id = self.make_material()
         with db_connect(self.db_path) as db:
@@ -146,7 +186,9 @@ class StudyAppTests(unittest.TestCase):
             db.execute("UPDATE settings SET value = '1' WHERE key = 'api_ai_enabled'")
             db.commit()
         result = ({"title": "Did", "blocks": [{"kind": "handwriting", "text": "listen",
-                   "explanation": "동사와 다른 표현", "uncertain": False}]},
+                   "explanation": "동사와 다른 표현", "uncertain": False,
+                   "region": "body", "group": 0, "background": "", "border": False,
+                   "text_style": "normal", "cells": []}]},
                   {"input_tokens": 700, "output_tokens": 500})
         with patch("app.paid_ai_ready", return_value=True), patch("app.call_ai", return_value=result) as ai:
             token = csrf_from(self.client.get(f"/materials/{material_id}/read"))
