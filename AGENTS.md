@@ -37,3 +37,5 @@
 2026-10-10 회차별 읽기 흐름 수정: 수업 화면은 자료 묶음을 회차 카드로 보여 준다. 묶음 전체 AI 변환이 성공해야 하나의 연속된 HTML 회차로 읽고 위치 메모를 사용할 수 있다. 변환 전에는 원본 확인과 변환 버튼만 표시한다. 쪽별 별도 메모 화면은 사용하지 않는다. 소유자는 이어지는 본문에서 메모 추가 후 원하는 위치를 찍어 여러 비공개 키보드 메모와 Apple Pencil 그림 필기를 저장한다. 그림은 명시적 Plus 인식 요청을 거쳐 편집 가능한 글로 옮기고, 확인한 텍스트 메모를 문제 생성 및 시험·회차별 취약점 분석에 활용한다. 메모 자체는 비로그인·초대 사용자에게 공개하지 않는다. Apple Pencil 사용 여부는 실제 iPad에서 검증해야 한다.
 
 - Converted episodes support owner-only Apple Pencil ink directly over the continuous HTML reading surface. Keep ink unavailable before the whole packet's atomic AI conversion succeeds; finger scrolling must still work. Persist ink per source page and include only reviewed handwriting transcription in AI study context.
+
+- Preserve the photographed worksheet's visual design in the HTML episode: real shaded callouts, table grids and columns, list structure, heading hierarchy, and printed colors. A plain white app surface must not erase design that exists on the paper. Do not invent decoration; let the owner correct block appearance against the source.

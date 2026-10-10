@@ -47,3 +47,31 @@
 .episode:has(.episode-ink-toolbar) .episode-floating{bottom:88px}
 @media(max-width:700px){.episode-ink-toolbar{margin:0;bottom:0;left:0;transform:none;width:100%;border-radius:0}.episode:has(.episode-ink-toolbar) .episode-floating{bottom:115px}}
 .episode-ink-layer{touch-action:none}
+/* Recreate visible worksheet structures on the editable HTML episode. */
+.episode-stream{background:#fff}
+.episode-segment{padding-bottom:24px}
+.episode-shaded{background:#e6e6e6;padding:17px 20px;margin:23px 0 19px}
+.episode-shaded.shaded-continuation{margin-top:-19px;padding-top:0}
+.episode-shaded h3,.episode-shaded .episode-callout-head{font-size:17px;line-height:1.45;font-weight:750;margin:0}
+.episode-shaded .episode-callout-body,.episode-shaded.shaded-continuation p{font-style:italic;margin:11px 0 0 24px;line-height:1.55}
+.episode-table-header,.episode-table-row{margin:0;border:1px solid #333;border-bottom:0}
+.episode-table-header{margin-top:20px;background:#f2f2f2;font-weight:750;text-align:center}
+.episode-table-header .episode-cells{font-size:16px}
+.episode-table-row .episode-cells{font-style:italic}
+.episode-table-row .episode-cells span+span{font-weight:650}
+.episode-table-row:has(+ :not(.episode-table-row)),.episode-table-row:last-of-type{border-bottom:1px solid #333}
+.episode-cells{display:grid;grid-template-columns:1fr 1fr;min-height:42px}
+.episode-cells span{display:flex;align-items:center;padding:7px 11px;line-height:1.4;overflow-wrap:anywhere}
+.episode-cells span+span{border-left:1px solid #333}
+.episode-table-row .episode-explanation{padding:5px 10px;margin:0}
+.episode-running_header{font-family:cursive;font-size:13px;text-align:right;margin:-16px 0 14px;color:#222}
+.episode-running_header p{font-size:13px}
+.episode-example_list{font-style:italic;margin:0 0 7px 18px}
+.episode-example_list p{font-size:16px}
+.episode-heading+.episode-controls{margin-bottom:18px}
+.episode-handwriting:has(>p:first-child:last-child){color:#444}
+.episode-segment .episode-block h3{font-weight:750}
+@media(max-width:700px){.episode-shaded{padding:13px 14px}.episode-cells span{padding:6px 7px;font-size:14px}}
+.episode-margin_note{height:0;margin:0;z-index:1}
+.episode-margin_note p{position:absolute;left:-28px;top:5px;font-size:20px;line-height:1}
+.episode-edit-link{display:block;text-align:right;font-size:12px;color:#555;margin:5px 0 0}

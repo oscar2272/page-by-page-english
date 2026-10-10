@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from app import create_app, db_connect, hash_password, lesson_text
+from app import create_app, db_connect, display_page, hash_password, lesson_text
 from scan import make_a4_preview
 
 
@@ -217,6 +217,19 @@ class StudyAppTests(unittest.TestCase):
                        ('{"title":"Did","blocks":[{"kind":"text","text":"Did you go?","explanation":"","uncertain":false}]}', photo["id"]))
             db.execute("INSERT INTO render_jobs(packet_id, status, completed, total) VALUES (?, 'succeeded', 1, 1)", (photo["packet_id"],))
             return photo["id"], photo["packet_id"]
+
+    def test_original_shading_and_table_structure_are_recreated(self):
+        page = display_page({"title": "Sheet", "blocks": [
+            {"kind": "text", "text": "💡 Make = you build it.\n\n(Think of MAKE as building.)", "explanation": "", "uncertain": False},
+            {"kind": "heading", "text": "🇰🇷 VERB-FIRST THINKING    🇺🇸 NATURAL ENGLISH CHUNK", "explanation": "", "uncertain": False},
+            {"kind": "example", "text": "“Decide quickly.”    “Make a quick decision.”", "explanation": "", "uncertain": False},
+        ]})
+        self.assertEqual([block["appearance"] for block in page["blocks"]],
+                         ["shaded", "table_header", "table_row"])
+        self.assertEqual(page["blocks"][2]["cells"], ["“Decide quickly.”", "“Make a quick decision.”"])
+        self.assertEqual(page["blocks"][0]["callout_body"], "(Think of MAKE as building.)")
+        self.assertEqual(display_page({"title": "", "blocks": [{"kind": "text", "text": "💡 Plain",
+            "appearance": "plain", "explanation": "", "uncertain": False}]})["blocks"][0]["appearance"], "plain")
 
     def test_episode_notes_require_full_ai_conversion_and_stay_private(self):
         material_id = self.make_material()
