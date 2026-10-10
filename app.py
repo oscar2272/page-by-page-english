@@ -1587,7 +1587,16 @@ def create_app(test_config: dict | None = None) -> Flask:
                         "SELECT * FROM photos WHERE packet_id = ? ORDER BY position, id", (packet_id,))]
                 results = []
                 for index, photo in enumerate(photos, 1):
-                    result, usage, model = render_photo_with_ai(photo, packet["title"], app.instance_path)
+                    for attempt in range(3):
+                        try:
+                            result, usage, model = render_photo_with_ai(photo, packet["title"], app.instance_path)
+                            break
+                        except (RuntimeError, TimeoutError) as exc:
+                            retryable = isinstance(exc, TimeoutError) or any(message in str(exc) for message in (
+                                "끝까지 도착하지 않았습니다", "서비스에 연결할 수 없습니다"))
+                            if not retryable or attempt == 2:
+                                raise
+                            time.sleep(2 * (attempt + 1))
                     results.append((photo, result, usage, model))
                     with db_connect(Path(app.config["DATABASE"])) as db:
                         db.execute("UPDATE render_jobs SET completed = ? WHERE id = ? AND status = 'running'", (index, job_id))

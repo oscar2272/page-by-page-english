@@ -188,6 +188,28 @@ class StudyAppTests(unittest.TestCase):
             self.assertEqual(db.execute("SELECT COUNT(*) FROM ai_usage").fetchone()[0], 0)
             self.assertEqual(db.execute("SELECT status FROM render_jobs").fetchone()[0], "failed")
 
+    def test_packet_conversion_retries_incomplete_stream_before_commit(self):
+        material_id = self.make_material()
+        with db_connect(self.db_path) as db:
+            packet_id = db.execute("SELECT packet_id FROM photos WHERE material_id = ?", (material_id,)).fetchone()[0]
+        class ImmediateThread:
+            def __init__(self, target, args, daemon):
+                self.target, self.args = target, args
+            def start(self):
+                self.target(*self.args)
+        result = ({"title": "Did", "blocks": []}, {"input_tokens": 10, "output_tokens": 10}, "gpt-6.1-sol")
+        with patch("app.ai_ready", return_value=True), patch("app.threading.Thread", ImmediateThread), \
+             patch("app.time.sleep"), patch("app.render_photo_with_ai", side_effect=[
+                 RuntimeError("ChatGPT 응답이 끝까지 도착하지 않았습니다."), result]) as render:
+            token = csrf_from(self.client.get(f"/materials/{material_id}/read"))
+            response = self.client.post(f"/materials/{material_id}/packets/{packet_id}/render/ai",
+                data={"_csrf": token}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(render.call_count, 2)
+        with db_connect(self.db_path) as db:
+            self.assertEqual(db.execute("SELECT status FROM render_jobs").fetchone()[0], "succeeded")
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM ai_usage").fetchone()[0], 1)
+
     def converted_episode(self, material_id):
         with db_connect(self.db_path) as db:
             photo = db.execute("SELECT id, packet_id FROM photos WHERE material_id = ?", (material_id,)).fetchone()
