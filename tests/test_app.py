@@ -190,17 +190,18 @@ class StudyAppTests(unittest.TestCase):
                    "region": "body", "group": 0, "background": "", "border": False,
                    "text_style": "normal", "cells": []}]},
                   {"input_tokens": 700, "output_tokens": 500})
-        with patch("app.paid_ai_ready", return_value=True), patch("app.call_ai", return_value=result) as ai:
+        audit = ({"passed": True, "issues": []}, {"input_tokens": 120, "output_tokens": 40})
+        with patch("app.paid_ai_ready", return_value=True), patch("app.call_ai", side_effect=[result, audit]) as ai:
             token = csrf_from(self.client.get(f"/materials/{material_id}/read"))
             response = self.client.post(f"/photos/{photo_id}/render/ai", data={"_csrf": token}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn("동사와 다른 표현".encode(), response.data)
-        self.assertEqual(ai.call_count, 1)
-        self.assertEqual(ai.call_args.kwargs["model"], "gpt-4.1-mini")
-        self.assertEqual(ai.call_args.kwargs["max_output_tokens"], 8000)
+        self.assertEqual(ai.call_count, 2)
+        self.assertEqual(ai.call_args_list[0].kwargs["model"], "gpt-4.1-mini")
+        self.assertEqual(ai.call_args_list[0].kwargs["max_output_tokens"], 8000)
         with db_connect(self.db_path) as db:
             usage = db.execute("SELECT photo_id, model, input_tokens, output_tokens FROM ai_usage").fetchone()
-            self.assertEqual(tuple(usage), (photo_id, "gpt-4.1-mini", 700, 500))
+            self.assertEqual(tuple(usage), (photo_id, "gpt-4.1-mini", 820, 540))
 
     def test_packet_conversion_rolls_back_all_pages_if_later_page_fails(self):
         material_id = self.make_material()
@@ -229,6 +230,24 @@ class StudyAppTests(unittest.TestCase):
             self.assertEqual([row[0] for row in pages], ['{"title":"old","blocks":[]}', ""])
             self.assertEqual(db.execute("SELECT COUNT(*) FROM ai_usage").fetchone()[0], 0)
             self.assertEqual(db.execute("SELECT status FROM render_jobs").fetchone()[0], "failed")
+
+    def test_visual_audit_rejects_unresolved_layout_without_overwriting(self):
+        material_id = self.make_material()
+        with db_connect(self.db_path) as db:
+            photo_id = db.execute("SELECT id FROM photos WHERE material_id = ?", (material_id,)).fetchone()[0]
+            db.execute("UPDATE photos SET rendered_json = ? WHERE id = ?", ('{"title":"old","blocks":[]}', photo_id))
+            db.execute("UPDATE settings SET value = '1' WHERE key = 'api_ai_enabled'")
+        candidate = ({"title": "Page", "blocks": [{"kind": "text", "text": "A", "explanation": "", "uncertain": False,
+            "region": "body", "group": 0, "background": "", "border": False, "text_style": "normal", "cells": []}]},
+            {"input_tokens": 10, "output_tokens": 10})
+        rejected = ({"passed": False, "issues": ["회색 상자 누락"]}, {"input_tokens": 10, "output_tokens": 10})
+        with patch("app.paid_ai_ready", return_value=True), patch("app.call_ai", side_effect=[candidate, rejected, candidate, rejected]):
+            token = csrf_from(self.client.get(f"/photos/{photo_id}/render/edit"))
+            response = self.client.post(f"/photos/{photo_id}/render/ai", data={"_csrf": token, "replace": "1"}, follow_redirects=True)
+        self.assertIn("회색 상자 누락".encode(), response.data)
+        with db_connect(self.db_path) as db:
+            self.assertEqual(db.execute("SELECT rendered_json FROM photos WHERE id = ?", (photo_id,)).fetchone()[0], '{"title":"old","blocks":[]}')
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM ai_usage").fetchone()[0], 0)
 
     def test_packet_conversion_retries_incomplete_stream_before_commit(self):
         material_id = self.make_material()
