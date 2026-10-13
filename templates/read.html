@@ -9,7 +9,7 @@
   {% for packet in packets %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">{{ packet['episode_number'] }}회차</span><h2>{{ packet['title'] }}</h2><p>{{ packet['photos']|length }}쪽 · 아래로 이어 읽기</p></div>
     {% if current_user and current_user['role'] == 'owner' and packet['photos'] %}<div class="packet-render-control">
       {% set job = packet['render_job'] %}
-      {% if job and job['status'] == 'running' %}<p>변환 중: {{ job['completed'] }}/{{ job['total'] }}쪽 읽음. 모든 쪽이 끝나면 정리본을 한 번에 반영합니다.</p>
+      {% if job and job['status'] == 'running' %}<div class="ai-progress-card" role="status" aria-live="polite"><div class="ai-progress-title"><span class="ai-spinner" aria-hidden="true"></span><strong>AI 변환 중 · {{ job['completed'] }}/{{ job['total'] }}쪽</strong></div><p>모든 쪽이 끝나면 정리본을 한 번에 반영합니다. 페이지를 이동해도 변환은 계속됩니다.</p><progress max="{{ job['total'] or 1 }}" value="{{ job['completed'] }}"></progress></div>
       {% elif job and job['status'] == 'failed' %}<p class="render-error">변환 실패: {{ job['error'] }} 기존 정리본은 그대로입니다.</p>{% endif %}
       {% if job and job['status'] == 'succeeded' %}<p>묶음 전체 변환 완료. 원본과 필기를 비교해 확인해 주세요.</p>{% endif %}
       {% if ai_ready and (not job or job['status'] != 'running') %}<form method="post" action="{{ url_for('ai_render_packet', material_id=item['id'], packet_id=packet['id']) }}"><input type="hidden" name="_csrf" value="{{ csrf }}">
@@ -24,5 +24,5 @@
   {% if ungrouped %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">MATERIAL</span><h2>미분류</h2><p>{{ ungrouped|length }}쪽</p></div>{% for photo in ungrouped %}{% set page_number = loop.index %}{% include 'rendered_photo.html' %}{% endfor %}</section>{% endif %}
   {% if not packets and not ungrouped %}<p class="inline-empty">등록된 사진이 없습니다.</p>{% endif %}
 </div>
-{% if packets|selectattr('render_job')|selectattr('render_job.status', 'equalto', 'running')|list %}<script>setTimeout(() => location.reload(), 8000);</script>{% endif %}
+{% if packets|selectattr('render_job')|selectattr('render_job.status', 'equalto', 'running')|list %}<script>setTimeout(() => location.reload(), 3000);</script>{% endif %}
 {% endblock %}

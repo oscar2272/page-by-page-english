@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from app import create_app, db_connect, display_page, hash_password, lesson_text
+from app import create_app, db_connect, display_page, hash_password, lesson_text, week_packet_targets
 from scan import make_a4_preview
 from worksheet_layout import normalize_page
 
@@ -837,6 +837,63 @@ class StudyAppTests(unittest.TestCase):
         self.assertEqual(result, {"ok": True})
         self.assertEqual(usage["input_tokens"], 2)
         plan_call.assert_called_once()
+
+    def test_week_packet_targets_skip_partial_conversion_and_allow_explanation_review(self):
+        material_id = self.make_material()
+        with db_connect(self.db_path) as db:
+            packet_id = db.execute("SELECT id FROM material_packets WHERE material_id = ?", (material_id,)).fetchone()["id"]
+            photo = dict(db.execute("SELECT * FROM photos WHERE material_id = ?", (material_id,)).fetchone())
+            db.execute("UPDATE photos SET rendered_json = ? WHERE id = ?", ('{"blocks":[]}', photo["id"]))
+            db.execute("""INSERT INTO photos(material_id, packet_id, position, original_name, original_path,
+                preview_path, mime_type, rendered_json) VALUES (?, ?, 1, ?, ?, ?, ?, '')""",
+                (material_id, packet_id, photo["original_name"], photo["original_path"], photo["preview_path"], photo["mime_type"]))
+            db.commit()
+            candidates, skipped = week_packet_targets(db, 1, "convert")
+            self.assertEqual(candidates, [])
+            self.assertEqual(skipped, 1)
+            candidates, skipped = week_packet_targets(db, 1, "review")
+            self.assertEqual(candidates, [])
+            self.assertEqual(skipped, 1)
+            db.execute("UPDATE photos SET rendered_json = ? WHERE packet_id = ?", ('{"blocks":[]}', packet_id))
+            db.commit()
+            candidates, skipped = week_packet_targets(db, 1, "review")
+            self.assertEqual([row["id"] for row in candidates], [packet_id])
+            self.assertEqual(skipped, 0)
+
+    def test_week_page_shows_bulk_conversion_and_safe_explanation_review(self):
+        self.make_material()
+        response = self.client.get("/weeks/1")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("미변환 묶음 1개 일괄 변환".encode(), response.data)
+        self.assertIn("해설만 다시 검토".encode(), response.data)
+        self.assertIn("원문, 레이아웃, 메모와 필기 위치는 그대로 둡니다.".encode(), response.data)
+
+    def test_explanation_review_only_changes_help_text(self):
+        from app import review_page_explanations_with_ai
+
+        material_id = self.make_material()
+        with db_connect(self.db_path) as db:
+            photo = dict(db.execute("SELECT * FROM photos WHERE material_id = ?", (material_id,)).fetchone())
+        original = {"version": 2, "title": "A lesson", "regions": [{"id": 4}], "blocks": [
+            {"kind": "example", "text": "I feel a little better now.", "explanation": "old style description", "group": 1},
+            {"kind": "handwriting", "text": "go by Oscar", "explanation": "old position description", "group": 2},
+        ]}
+        generated = {"items": [
+            {"index": 0, "explanation": "이제 기분이 조금 나아졌어."},
+            {"index": 1, "explanation": "‘go by Oscar’는 오스카라는 이름으로 불린다는 뜻입니다."},
+        ]}
+        with patch("app.call_ai", return_value=(generated, {"input_tokens": 20, "output_tokens": 10})) as mocked:
+            reviewed, usage, model = review_page_explanations_with_ai(photo, "Lesson", original, self.app.instance_path)
+        self.assertEqual(reviewed["regions"], original["regions"])
+        self.assertEqual([block["text"] for block in reviewed["blocks"]], [block["text"] for block in original["blocks"]])
+        self.assertEqual([block["group"] for block in reviewed["blocks"]], [block["group"] for block in original["blocks"]])
+        self.assertEqual(reviewed["blocks"][0]["explanation"], generated["items"][0]["explanation"])
+        self.assertEqual(reviewed["blocks"][1]["explanation"], generated["items"][1]["explanation"])
+        self.assertEqual(usage["input_tokens"], 20)
+        self.assertEqual(model, "gpt-4.1-mini")
+        prompt = mocked.call_args.args[0][0]["text"]
+        self.assertIn("두 유형", prompt)
+        self.assertIn("색·글씨 모양", prompt)
 
     def test_plus_conversion_uses_gpt6_luna_high_effort(self):
         from plan_ai import call_plan_ai
