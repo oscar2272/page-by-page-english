@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="light">
   <title>{{ title }} · Page by Page</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=20261013-upload-status">
 </head>
 <body>
   <div class="app-shell">
@@ -47,5 +47,6 @@
     <main>{% block content %}{% endblock %}</main>
     <footer class="site-footer"><span>PAGE BY PAGE</span><span>조금씩, 오래 기억할 수 있도록.</span></footer>
   </div>
+  <script src="{{ url_for('static', filename='upload_loading.js') }}" defer></script>
 </body>
 </html>
