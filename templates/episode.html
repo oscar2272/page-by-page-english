@@ -3,7 +3,7 @@
 {% block content %}
 <div class="episode" id="episode" data-save-url="{{ url_for('save_episode_annotation', material_id=item['id'], packet_id=packet['id']) }}" data-csrf="{{ csrf }}" data-ai-ready="{{ '1' if ai_ready else '0' }}">
   <a class="back-link" href="{{ url_for('material_detail', material_id=item['id']) }}">← 수업으로 돌아가기</a>
-  <header class="episode-heading"><span class="eyebrow">{{ item['week_number'] }}주차 · 자료 묶음 {{ packet['episode_number'] }}</span><h1>{{ packet['title'] }}</h1><p>{{ packet['photos']|length }}쪽을 한 흐름으로 읽습니다.{% if fully_rendered and current_user and current_user['role'] == 'owner' %} Pencil은 본문 위에 직접 쓰고, 키보드 메모는 위치를 찍어 남기세요.{% endif %}</p></header>
+  <header class="episode-heading"><span class="eyebrow">{{ item['week_number'] }}주차 · 자료 묶음 {{ packet['packet_number'] }}</span><h1>{{ packet['title'] }}</h1><p>{{ packet['photos']|length }}쪽을 한 흐름으로 읽습니다.{% if fully_rendered and current_user and current_user['role'] == 'owner' %} Pencil은 본문 위에 직접 쓰고, 키보드 메모는 위치를 찍어 남기세요.{% endif %}</p></header>
   {% if current_user and current_user['role'] == 'owner' %}<div class="episode-controls">
     {% set job = packet['render_job'] %}
     {% if job and job['status'] == 'running' %}<div class="ai-progress-card" role="status" aria-live="polite"><div class="ai-progress-title"><span class="ai-spinner" aria-hidden="true"></span><strong>AI 변환 중 · {{ job['completed'] }}/{{ job['total'] }}쪽</strong></div><p>모든 쪽이 끝나면 정리본을 한 번에 반영합니다. 페이지를 이동해도 변환은 계속됩니다.</p><progress max="{{ job['total'] or 1 }}" value="{{ job['completed'] }}"></progress></div>

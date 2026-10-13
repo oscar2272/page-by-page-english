@@ -276,7 +276,7 @@ def packet_view(db, material_id):
     packets = [dict(row) for row in db.execute(
         "SELECT * FROM material_packets WHERE material_id = ? ORDER BY position, id", (material_id,))]
     for index, packet in enumerate(packets, 1):
-        packet["episode_number"] = index
+        packet["packet_number"] = index
     photos = db.execute("SELECT * FROM photos WHERE material_id = ? ORDER BY position, id", (material_id,)).fetchall()
     by_id = {packet["id"]: packet for packet in packets}
     for packet in packets:
