@@ -894,6 +894,8 @@ class StudyAppTests(unittest.TestCase):
         prompt = mocked.call_args.args[0][0]["text"]
         self.assertIn("두 유형", prompt)
         self.assertIn("색·글씨 모양", prompt)
+        self.assertIn("손글씨로 적힌 한국어 뜻풀이", prompt)
+        self.assertIn("마크다운 강조 표식", prompt)
 
     def test_plus_conversion_uses_gpt6_luna_high_effort(self):
         from plan_ai import call_plan_ai
