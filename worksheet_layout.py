@@ -41,6 +41,26 @@ def normalize_page(page):
         kind = block.get("kind")
         if kind not in ("heading", "text", "example", "exercise", "handwriting"):
             raise ValueError("내용 종류가 올바르지 않습니다.")
+        spans = block.get("spans", [])
+        if not isinstance(spans, list) or len(spans) > 160:
+            raise ValueError("문장 안 글자 스타일 구조가 올바르지 않습니다.")
+        normalized_spans = []
+        for span in spans:
+            if not isinstance(span, dict):
+                raise ValueError("문장 안 글자 스타일 구조가 올바르지 않습니다.")
+            span_text = span.get("text")
+            span_style = span.get("text_style")
+            if not isinstance(span_text, str) or len(span_text) > 5000 or span_style not in TEXT_STYLES:
+                raise ValueError("문장 안 글자 스타일 값이 올바르지 않습니다.")
+            normalized_spans.append({"text": span_text, "text_style": span_style})
+        if normalized_spans and "".join(span["text"] for span in normalized_spans) != text:
+            # Keep the transcription intact; the independent source audit can ask
+            # the model to repair mismatched inline formatting instead of failing early.
+            normalized_spans = []
+        if normalized_spans and cells:
+            # Table cells keep their separate cell-level layout; do not fail a
+            # whole packet over unsupported inline styling metadata in a row.
+            normalized_spans = []
         has_text = bool(text.strip() or any(cell.strip() for cell in cells) or explanation.strip() or block.get("uncertain"))
         if not has_text and not cells:
             # Vision models can emit empty scaffolding blocks between real regions.
@@ -56,7 +76,7 @@ def normalize_page(page):
         normalized.append({"kind": kind, "text": text, "explanation": explanation,
                            "uncertain": bool(block.get("uncertain")), "region": region,
                            "group": group, "background": background, "border": bool(block.get("border")),
-                           "text_style": style, "cells": cells})
+                           "text_style": style, "cells": cells, "spans": normalized_spans})
     if not any(block["text"].strip() or any(cell.strip() for cell in block["cells"])
                or block["explanation"].strip() or block["uncertain"] for block in normalized):
         raise ValueError("이 쪽에서 옮길 내용을 찾지 못했습니다. 원본을 확인해야 합니다.")

@@ -43,3 +43,6 @@ AI 응답에 내용이 없는 비표 보조 블록은 건너뛰되, 빈 표 행�
 - Converted episodes support owner-only Apple Pencil ink directly over the continuous HTML reading surface. Keep ink unavailable before the whole packet's atomic AI conversion succeeds; finger scrolling must still work. Persist ink per source page and include only reviewed handwriting transcription in AI study context.
 
 - Preserve the photographed worksheet's visual design in the HTML episode: real shaded callouts, table grids and columns, list structure, heading hierarchy, and printed colors. A plain white app surface must not erase design that exists on the paper. Do not invent decoration; let the owner correct block appearance against the source.
+
+- Skip empty non-table AI scaffolding blocks, preserve explicit blank table rows and uncertain handwriting, and reject a page only if it has no transcribed text, table content, handwriting explanation, or uncertainty marker. Keep the independent source audit and atomic packet commit.
+- Preserve inline bold, italic and underline runs within a sentence as ordered text/style spans, render them in both episode and PDF HTML, and expose them in the owner editor. If span text does not match the transcription, keep the transcription and let the source audit decide whether to retry.

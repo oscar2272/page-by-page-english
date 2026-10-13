@@ -2,6 +2,7 @@
 {% for region in page['regions'] %}<div class="worksheet-region worksheet-{{ region['type'] }}{{ ' worksheet-bordered' if region['border'] else '' }}"{% if region['background'] %} style="background-color:{{ region['background'] }}"{% endif %}>
   {% for block in region['blocks'] %}<div class="episode-block episode-{{ block['kind'] }} worksheet-text-{{ block['text_style'] }}" data-block-index="{{ block['index'] }}">
     {% if block['cells'] %}<div class="worksheet-cells">{% for cell in block['cells'] %}<span>{{ cell }}</span>{% endfor %}</div>
+    {% elif block.get('spans') %}{% if block['kind'] == 'heading' %}<h3>{% for span in block['spans'] %}<span class="worksheet-inline-{{ span['text_style'] }}">{{ span['text'] }}</span>{% endfor %}</h3>{% else %}<p>{% for span in block['spans'] %}<span class="worksheet-inline-{{ span['text_style'] }}">{{ span['text'] }}</span>{% endfor %}</p>{% endif %}
     {% elif block['kind'] == 'heading' %}<h3>{{ block['text'] }}</h3>{% else %}<p>{{ block['text'] }}</p>{% endif %}
     {% if block['explanation'] %}<details class="episode-explanation"><summary>{{ '필기 해설' if block['kind'] == 'handwriting' else '설명' }}</summary><p>{{ block['explanation'] }}</p></details>{% endif %}{% if block['uncertain'] %}<small>원본 확인 필요</small>{% endif %}
   </div>{% endfor %}

@@ -148,7 +148,8 @@ class StudyAppTests(unittest.TestCase):
             page = normalize_page({"title": "Worksheet", "blocks": [
                 {"kind": "text", "text": "A = B", "explanation": "", "uncertain": False,
                  "region": "callout", "group": 0, "background": "#e6e6e6", "border": False,
-                 "text_style": "bold", "cells": []},
+                 "text_style": "bold", "cells": [], "spans": [
+                     {"text": "A = ", "text_style": "normal"}, {"text": "B", "text_style": "bold"}]},
                 {"kind": "text", "text": "Description", "explanation": "", "uncertain": False,
                  "region": "callout", "group": 0, "background": "#e6e6e6", "border": False,
                  "text_style": "normal", "cells": []},
@@ -166,6 +167,8 @@ class StudyAppTests(unittest.TestCase):
         self.assertEqual(episode.status_code, 200)
         self.assertIn(b"worksheet-callout", episode.data)
         self.assertIn(b"worksheet-table", episode.data)
+        self.assertIn(b"worksheet-inline-normal", episode.data)
+        self.assertIn(b"worksheet-inline-bold", episode.data)
         self.assertIn(b"background-color:#e6e6e6", episode.data)
         printed = self.client.get(f"/materials/{material_id}/print")
         self.assertIn(b"worksheet-callout", printed.data)
@@ -173,12 +176,13 @@ class StudyAppTests(unittest.TestCase):
         editor = self.client.get(f"/photos/{photo_id}/render/edit")
         self.assertEqual(editor.status_code, 200)
         self.assertIn(b"block_group_0", editor.data)
+        self.assertIn(b"block_spans_0", editor.data)
         self.assertEqual(display_page(page)["regions"][0]["blocks"][1]["index"], 1)
         broken = {**page, "blocks": [dict(block) for block in page["blocks"]]}
         broken["blocks"][-1]["region"] = "invalid"
         with self.assertRaises(ValueError):
             normalize_page(broken)
-        empty_scaffold = {**page["blocks"][0], "text": "", "background": "", "border": False}
+        empty_scaffold = {**page["blocks"][0], "text": "", "spans": [], "background": "", "border": False}
         cleaned = normalize_page({"title": "Worksheet", "blocks": [empty_scaffold, *page["blocks"]]})
         self.assertEqual(len(cleaned["blocks"]), len(page["blocks"]))
         blank_table_row = {**page["blocks"][2], "text": "", "cells": ["", ""]}
@@ -186,6 +190,10 @@ class StudyAppTests(unittest.TestCase):
         self.assertEqual(table_with_blank_row["blocks"][-1]["cells"], ["", ""])
         with self.assertRaisesRegex(ValueError, "옮길 내용을 찾지 못했습니다"):
             normalize_page({"title": "Worksheet", "blocks": [empty_scaffold]})
+        invalid_spans = {**page["blocks"][0], "spans": [{"text": "wrong", "text_style": "bold"}]}
+        fallback = normalize_page({"title": "Worksheet", "blocks": [invalid_spans]})
+        self.assertEqual(fallback["blocks"][0]["text"], "A = B")
+        self.assertEqual(fallback["blocks"][0]["spans"], [])
 
     def test_one_page_ai_result_is_saved_with_usage_and_no_other_pages_changed(self):
         material_id = self.make_material()
