@@ -32,7 +32,7 @@ def plan_status(instance_dir):
         return None
     if PLAN_SCOPE not in record.get("scopes", []) or not record.get("refresh_token"):
         return None
-    return {"email": record.get("email", ""), "model": os.getenv("CHATGPT_PLAN_MODEL", "gpt-6.1-sol")}
+    return {"email": record.get("email", ""), "model": os.getenv("CHATGPT_PLAN_MODEL", "gpt-6-luna")}
 
 
 def _write_private(path, record):
@@ -94,9 +94,11 @@ def access_token(instance_dir):
 def call_plan_ai(instance_dir, input_items, schema, schema_name, instructions):
     if not plan_status(instance_dir):
         raise RuntimeError("ChatGPT Plus가 연결되지 않았습니다.")
-    model = os.getenv("CHATGPT_PLAN_MODEL", "gpt-6.1-sol")
+    model = os.getenv("CHATGPT_PLAN_MODEL", "gpt-6-luna")
+    reasoning_effort = os.getenv("CHATGPT_PLAN_REASONING_EFFORT", "high")
     payload = {
         "model": model,
+        "reasoning": {"effort": reasoning_effort},
         "instructions": instructions,
         "input": [{"role": "user", "content": input_items}],
         "text": {"format": {"type": "json_schema", "name": schema_name, "strict": True, "schema": schema}},

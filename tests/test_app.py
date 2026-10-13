@@ -838,6 +838,39 @@ class StudyAppTests(unittest.TestCase):
         self.assertEqual(usage["input_tokens"], 2)
         plan_call.assert_called_once()
 
+    def test_plus_conversion_uses_gpt6_luna_high_effort(self):
+        from plan_ai import call_plan_ai
+
+        credential = Path(self.app.instance_path) / "chatgpt-plan.json"
+        credential.write_text(json.dumps({
+            "scopes": ["chatgpt.tokens.use.direct"], "refresh_token": "test-refresh"
+        }))
+        events = [
+            b'data: {"type":"response.output_text.delta","delta":"{}"}\n',
+            b'data: {"type":"response.completed","response":{"usage":{"input_tokens":1}}}\n',
+        ]
+
+        class StreamReply:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def __iter__(self):
+                return iter(events)
+
+        with patch("plan_ai.access_token", return_value="plan-token"), \
+             patch("plan_ai.urllib.request.urlopen", return_value=StreamReply()) as open_url:
+            parsed, _usage, model = call_plan_ai(self.app.instance_path, [], {}, "test", "test")
+
+        request = open_url.call_args.args[0]
+        payload = json.loads(request.data)
+        self.assertEqual(model, "gpt-6-luna")
+        self.assertEqual(payload["model"], "gpt-6-luna")
+        self.assertEqual(payload["reasoning"], {"effort": "high"})
+        self.assertEqual(parsed, {})
+
     def test_page_crops_use_valid_image_data_urls(self):
         import base64
         import json

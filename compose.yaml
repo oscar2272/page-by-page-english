@@ -8,6 +8,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DEEPL_API_KEY: ${DEEPL_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      CHATGPT_PLAN_MODEL: ${CHATGPT_PLAN_MODEL:-gpt-6-luna}
+      CHATGPT_PLAN_REASONING_EFFORT: ${CHATGPT_PLAN_REASONING_EFFORT:-high}
     volumes:
       - study_data:/data
   caddy:
