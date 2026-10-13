@@ -3,10 +3,10 @@
 <div class="reader-page lesson-reader">
   <a class="back-link" href="{{ url_for('material_detail', material_id=item['id']) }}">← 수업으로 돌아가기</a>
   <header class="reader-heading">
-    <div><span class="eyebrow">STUDY STORY</span><h1>{{ item['title'] }}</h1><p>원본 사진은 업로드한 순서대로 보관됩니다. AI 정리본은 묶음별로 직접 변환을 시작한 뒤 확인할 수 있습니다.</p></div>
+    <div><span class="eyebrow">PACKET READING</span><h1>{{ item['title'] }}</h1><p>원본 사진은 업로드한 순서대로 보관됩니다. AI 정리본은 묶음별로 직접 변환을 시작한 뒤 확인할 수 있습니다.</p></div>
     <div class="reader-actions"><a class="button outline" href="{{ url_for('print_material', material_id=item['id']) }}" target="_blank" rel="noopener">PDF 저장</a></div>
   </header>
-  {% for packet in packets %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">{{ packet['episode_number'] }}회차</span><h2>{{ packet['title'] }}</h2><p>{{ packet['photos']|length }}쪽 · 아래로 이어 읽기</p></div>
+  {% for packet in packets %}<section class="story-packet"><div class="story-packet-heading"><span class="eyebrow">자료 묶음 {{ packet['episode_number'] }}</span><h2>{{ packet['title'] }}</h2><p>{{ packet['photos']|length }}쪽 · 아래로 이어 읽기</p></div>
     {% if current_user and current_user['role'] == 'owner' and packet['photos'] %}<div class="packet-render-control">
       {% set job = packet['render_job'] %}
       {% if job and job['status'] == 'running' %}<div class="ai-progress-card" role="status" aria-live="polite"><div class="ai-progress-title"><span class="ai-spinner" aria-hidden="true"></span><strong>AI 변환 중 · {{ job['completed'] }}/{{ job['total'] }}쪽</strong></div><p>모든 쪽이 끝나면 정리본을 한 번에 반영합니다. 페이지를 이동해도 변환은 계속됩니다.</p><progress max="{{ job['total'] or 1 }}" value="{{ job['completed'] }}"></progress></div>

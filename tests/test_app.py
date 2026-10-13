@@ -482,7 +482,12 @@ class StudyAppTests(unittest.TestCase):
             material_id = db.execute("SELECT id FROM materials").fetchone()["id"]
             did_id = db.execute("SELECT id FROM material_packets WHERE title = 'did'").fetchone()["id"]
         page = self.client.get(f"/materials/{material_id}")
-        self.assertIn("1회차 / 전체 2회차".encode(), page.data)
+        self.assertIn("자료 묶음 1 / 전체 2개".encode(), page.data)
+        self.assertNotIn("1회차 / 전체 2회차".encode(), page.data)
+        reading_page = self.client.get(f"/materials/{material_id}/read")
+        self.assertIn("자료 묶음 1".encode(), reading_page.data)
+        self.assertIn("자료 묶음 2".encode(), reading_page.data)
+        self.assertNotIn("회차".encode(), reading_page.data)
         self.assertNotIn(b'name="position"', page.data)
         token = csrf_from(page)
         self.client.post(f"/materials/{material_id}/packets/{did_id}/order",
