@@ -178,6 +178,14 @@ class StudyAppTests(unittest.TestCase):
         broken["blocks"][-1]["region"] = "invalid"
         with self.assertRaises(ValueError):
             normalize_page(broken)
+        empty_scaffold = {**page["blocks"][0], "text": "", "background": "", "border": False}
+        cleaned = normalize_page({"title": "Worksheet", "blocks": [empty_scaffold, *page["blocks"]]})
+        self.assertEqual(len(cleaned["blocks"]), len(page["blocks"]))
+        blank_table_row = {**page["blocks"][2], "text": "", "cells": ["", ""]}
+        table_with_blank_row = normalize_page({"title": "Worksheet", "blocks": [*page["blocks"], blank_table_row]})
+        self.assertEqual(table_with_blank_row["blocks"][-1]["cells"], ["", ""])
+        with self.assertRaisesRegex(ValueError, "옮길 내용을 찾지 못했습니다"):
+            normalize_page({"title": "Worksheet", "blocks": [empty_scaffold]})
 
     def test_one_page_ai_result_is_saved_with_usage_and_no_other_pages_changed(self):
         material_id = self.make_material()

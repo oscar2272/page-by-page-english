@@ -21,13 +21,6 @@ def normalize_page(page):
         group = block.get("group")
         if region not in REGION_TYPES or not isinstance(group, int) or isinstance(group, bool) or group < 0:
             raise ValueError(f"{position + 1}번째 내용의 영역 정보가 올바르지 않습니다.")
-        if group != previous_group:
-            if group in finished_groups:
-                raise ValueError("같은 원본 영역이 떨어져 있습니다. 읽는 순서를 확인해야 합니다.")
-            finished_groups.add(group)
-        elif normalized[-1]["region"] != region:
-            raise ValueError("같은 영역 안의 구조 종류가 서로 다릅니다.")
-        previous_group = group
         text = str(block.get("text", ""))
         explanation = str(block.get("explanation", ""))
         cells = block.get("cells", [])
@@ -37,8 +30,6 @@ def normalize_page(page):
             raise ValueError("표가 아닌 영역에 표 칸이 들어 있습니다.")
         if region == "table" and not text.strip():
             text = "\t".join(cells)
-        if not text.strip() and not any(cell.strip() for cell in cells):
-            raise ValueError("비어 있는 내용이 있습니다. 원본에서 누락됐는지 확인해야 합니다.")
         if len(text) > 5000 or len(explanation) > 3000:
             raise ValueError("내용이 편집 가능한 길이를 넘어섰습니다.")
         background = str(block.get("background", ""))
@@ -50,10 +41,25 @@ def normalize_page(page):
         kind = block.get("kind")
         if kind not in ("heading", "text", "example", "exercise", "handwriting"):
             raise ValueError("내용 종류가 올바르지 않습니다.")
+        has_text = bool(text.strip() or any(cell.strip() for cell in cells) or explanation.strip() or block.get("uncertain"))
+        if not has_text and not cells:
+            # Vision models can emit empty scaffolding blocks between real regions.
+            # Keep explicit empty table cells because they carry visible grid structure.
+            continue
+        if group != previous_group:
+            if group in finished_groups:
+                raise ValueError("같은 원본 영역이 떨어져 있습니다. 읽는 순서를 확인해야 합니다.")
+            finished_groups.add(group)
+        elif normalized[-1]["region"] != region:
+            raise ValueError("같은 영역 안의 구조 종류가 서로 다릅니다.")
+        previous_group = group
         normalized.append({"kind": kind, "text": text, "explanation": explanation,
                            "uncertain": bool(block.get("uncertain")), "region": region,
                            "group": group, "background": background, "border": bool(block.get("border")),
                            "text_style": style, "cells": cells})
+    if not any(block["text"].strip() or any(cell.strip() for cell in block["cells"])
+               or block["explanation"].strip() or block["uncertain"] for block in normalized):
+        raise ValueError("이 쪽에서 옮길 내용을 찾지 못했습니다. 원본을 확인해야 합니다.")
     for group in finished_groups:
         rows = [block for block in normalized if block["group"] == group]
         # Printed tables can contain spanning cells or handwritten marks between rows.
